@@ -1,0 +1,35 @@
+# private_chat.routing.yml
+
+private_chat.ui:
+  # Der Parameter {chat_uuid} ist jetzt Teil des Pfades.
+  path: '/chat/ui/{chat_uuid?}'
+  defaults:
+    _controller: '\Drupal\private_chat\Controller\ChatUIController::buildUi'
+    _title: 'Meine Chats'
+    # Wir setzen einen Standardwert auf NULL, falls keine UUID übergeben wird.
+    chat_uuid: NULL
+  requirements:
+    _permission: 'start private chat'
+
+private_chat.load_ajax:
+  path: '/chat/load/{chat_uuid}'
+  defaults:
+    _controller: '\Drupal\private_chat\Controller\ChatUIController::loadChatAjax'
+    _title: 'Chat laden'
+  requirements:
+    _permission: 'start private chat'
+    # Es ist eine gute Praxis, das Format der UUID zu überprüfen.
+    chat_uuid: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+
+private_chat.start:
+  path: '/chat/start/{user}'
+  defaults:
+    _controller: '\Drupal\private_chat\Controller\ChatController::startChat'
+    _title: 'Chat starten'
+  requirements:
+    _permission: 'start private chat'
+    user: \d+
+  options:
+    parameters:
+      user:
+        type: entity:user

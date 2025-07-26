@@ -1,0 +1,95 @@
+uuid: c1a2b3c4-d5e6-f7a8-g9h0-i1j2k3l4m5n6
+langcode: de
+status: true
+dependencies:
+  module:
+    - private_chat
+    - user
+    - views
+id: chats_overview
+label: 'Chat-Übersicht'
+module: views
+description: 'Zeigt eine Liste aller privaten Chats an.'
+tag: ''
+base_table: chat
+base_field: id
+display:
+  default:
+    display_plugin: default
+    id: default
+    display_title: Master
+    position: 0
+    display_options:
+      access:
+        type: perm
+        options:
+          perm: 'administer site configuration'
+      cache:
+        type: tag
+        options: { }
+      query:
+        type: views_query
+        options: { }
+      exposed_form:
+        type: basic
+      pager:
+        type: full
+        options:
+          items_per_page: 25
+      style:
+        type: table
+      row:
+        type: fields
+      fields:
+        id:
+          id: id
+          table: chat
+          field: id
+          label: 'Chat ID'
+          plugin_id: numeric
+          alter:
+            strip_tags: false
+            trim: false
+            word_boundary: false
+            ellipsis: false
+            html: false
+          hide_empty: false
+          empty_zero: false
+        user1:
+          id: user1
+          table: chat
+          field: user1
+          relationship: none
+          plugin_id: entity_reference_label
+          label: 'Teilnehmer 1'
+        user2:
+          id: user2
+          table: chat
+          field: user2
+          relationship: none
+          plugin_id: entity_reference_label
+          label: 'Teilnehmer 2'
+        changed:
+          id: changed
+          table: chat
+          field: changed
+          plugin_id: date
+          label: 'Letzte Aktivität'
+          settings:
+            date_format: short
+            custom_date_format: ''
+          date_source: 'base'
+        operations:
+          id: operations
+          table: chat
+          field: operations
+          plugin_id: entity_operations
+          label: Aktionen
+  page_1:
+    display_plugin: page
+    id: page_1
+    display_title: Seite
+    position: 1
+    display_options:
+      display_extenders: { }
+      path: admin/content/chats

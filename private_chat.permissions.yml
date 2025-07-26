@@ -1,0 +1,8 @@
+# private_chat/private_chat.permissions.yml
+start private chat:
+  title: 'Private Chats starten'
+  description: 'Erlaubt Benutzern, neue private Chats mit anderen Benutzern zu initiieren.'
+
+delete private chat entities:
+  title: 'Private Chats löschen'
+  description: 'Erlaubt Benutzern, private Chats und alle zugehörigen Nachrichten zu löschen.'

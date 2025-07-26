@@ -1,0 +1,7 @@
+chat-styling:
+  css:
+    theme:
+      css/private_chat.css: {}
+  dependencies:
+    - drupal/jquery
+    - drupal/drupal.ajax

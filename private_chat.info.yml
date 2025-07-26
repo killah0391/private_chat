@@ -1,0 +1,8 @@
+# private_chat/private_chat.info.yml
+name: 'Private Chat'
+type: module
+description: 'Ermöglicht private 1-zu-1-Chats zwischen Benutzern.'
+core_version_requirement: ^10
+package: 'Custom'
+dependencies:
+  - drupal:views

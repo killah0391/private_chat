@@ -1,0 +1,5 @@
+view.chats_overview.page_1:
+  route_name: view.chats_overview.page_1
+  title: 'Private Chats'
+  base_route: system.admin_content
+  weight: 100

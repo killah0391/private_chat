@@ -1,0 +1,18 @@
+
+<div class="chat-message {{ sent_received }}">
+	{% if author_picture %}
+		<div class="author-picture">
+			{{ author_picture }}
+		</div>
+	{% endif %}
+	<div class="chat-message-content">
+		<div class="body">
+			{{ body }}
+		</div>
+		<div class="meta">
+			{# <span class="chat-message-author">{{ author_name }}</span>
+			| #}
+			<span class="time">{{ time }}</span>
+		</div>
+	</div>
+</div>

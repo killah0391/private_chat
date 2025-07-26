@@ -1,0 +1,33 @@
+langcode: de
+status: true
+dependencies:
+  module:
+    - text
+id: message.message.default
+targetEntityType: message
+bundle: message
+mode: default
+content:
+  author:
+    type: entity_reference_autocomplete
+    weight: 0
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  message:
+    type: text_textarea
+    weight: 1
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+hidden:
+  chat_id: true
+  created: true
+  id: true
+  uuid: true

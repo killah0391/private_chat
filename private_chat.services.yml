@@ -1,0 +1,10 @@
+# private_chat.services.yml
+services:
+  private_chat.chat_controller:
+    class: Drupal\private_chat\Controller\ChatController
+    arguments: ['@entity_type.manager', '@current_user', '@date.formatter']
+
+  # Wir fügen den Service für den UI-Controller hinzu
+  private_chat.chat_ui_controller:
+    class: Drupal\private_chat\Controller\ChatUIController
+    arguments: ['@private_chat.chat_controller', '@current_user', '@request_stack']

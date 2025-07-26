@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * @file
+ * Contains private_chat.module.
+ */
+
+use Drupal\Core\Render\Element;
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function private_chat_help($route_name, RouteMatchInterface $route_match)
+{
+  switch ($route_name) {
+    // Main module help for the private_chat module.
+    case 'help.page.private_chat':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Provides a private chat system for users.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function private_chat_theme($existing, $type, $theme, $path)
+{
+  return [
+    'private_chat_page' => [
+      'variables' => [
+        'messages' => [],
+        'form' => NULL,
+      ],
+    ],
+    'private_chat_message' => [
+      'template' => 'private-chat-message', // Verweist auf die .html.twig Datei
+      'variables' => [
+        'author_name' => NULL,
+        'author_picture' => NULL,
+        'body' => NULL,
+        'time' => NULL,
+        'sent_received' => 'received',
+      ],
+    ],
+    'private_chat_ui_page' => [
+      'variables' => ['chat_list' => NULL, 'chat_content' => NULL],
+      'template' => 'private-chat-ui-page',
+    ],
+    'private_chat_list_item' => [
+      'variables' => [
+        'other_participant_name' => NULL,
+        'last_message' => [],
+        'url' => NULL,
+        'is_active' => FALSE,
+      ],
+      'template' => 'private-chat-list-item',
+    ],
+  ];
+}

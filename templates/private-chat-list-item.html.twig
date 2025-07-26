@@ -1,0 +1,29 @@
+{% set classes = [
+  'chat-list-item',
+  is_active ? 'is-active',
+] %}
+
+<li{{attributes.addClass(classes)}}>
+	<a href="{{ url }}" class="use-ajax chat-list-item" data-ajax-wrapper="chat-content-wrapper">
+		<div class="chat-list-item-content">
+    <div class="chat-list-item-header">
+			<div class="chat-list-item-participant">
+				{{ other_participant_name }}
+			</div>
+<div class="chat-list-item-time">
+	{{ last_message.time }}
+</div>
+</div>
+
+			<div class="chat-list-item-last-message">
+				{{ last_message.text }}
+			</div>
+		</div>
+		{# <div class="chat-list-item__meta">
+			<div class="chat-list-item__time">
+				{{ last_message.time }}
+			</div>
+		</div> #}
+	</a>
+</li>
+
