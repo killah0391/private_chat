@@ -2,14 +2,15 @@
 
 namespace Drupal\private_chat\Controller;
 
-use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Url;
 use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\InvokeCommand;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Datetime\DateFormatterInterface;
-use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\Url;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ChatUIController extends ControllerBase
 {
@@ -63,6 +64,7 @@ class ChatUIController extends ControllerBase
       '#attached' => [
         'library' => [
           'private_chat/chat-styling',
+          'private_chat/mobile-ui',
         ],
       ],
     ];
@@ -79,13 +81,13 @@ class ChatUIController extends ControllerBase
     // 1. Hole den neuen Hauptinhalt.
     $chat_page_render_array = $this->chatController->chatPage($chat_uuid);
 
-    // 2. Hole die aktualisierte Seitenleiste (mit der neuen 'is-active'-Klasse).
+    // 2. Hole die aktualisierte Seitenleiste.
     $chat_list_render_array = $this->_buildChatListRenderArray($chat_uuid);
 
     $response = new AjaxResponse();
-    // BEFEHL 1: Ersetze den Hauptinhalt.
+
+    // Die restlichen Befehle ersetzen den Inhalt wie gewohnt.
     $response->addCommand(new HtmlCommand('#chat-content-wrapper', $chat_page_render_array));
-    // BEFEHL 2: Ersetze die Seitenleiste, damit Layout und 'is-active' stimmen.
     $response->addCommand(new HtmlCommand('#chat-list-wrapper', $chat_list_render_array));
 
     return $response;
@@ -94,7 +96,7 @@ class ChatUIController extends ControllerBase
   /**
    * Private Hilfsfunktion, um das Render-Array der Chat-Liste zu erstellen.
    */
-  private function _buildChatListRenderArray(string $active_chat_uuid = NULL)
+  public function _buildChatListRenderArray(string $active_chat_uuid = NULL)
   {
     $current_user_id = $this->currentUser->id();
     $current_user_entity = $this->entityTypeManager()->getStorage('user')->load($current_user_id);
@@ -135,6 +137,13 @@ class ChatUIController extends ControllerBase
     $last_message_ids = $last_message_query->execute();
     $last_message = !empty($last_message_ids) ? $this->entityTypeManager()->getStorage('message')->load(reset($last_message_ids)) : NULL;
 
+    $unread_count_query = $this->entityTypeManager()->getStorage('message')->getQuery()
+      ->condition('chat_id', $chat->id())
+      ->condition('is_read', FALSE)
+      ->condition('author', $this->currentUser->id(), '<>') // Nachrichten von anderen
+      ->accessCheck(FALSE);
+    $unread_count = $unread_count_query->count()->execute();
+
     if (!$last_message) {
       return ['text' => 'Noch keine Nachrichten.', 'time' => $this->dateFormatter->formatDiff($chat->get('created')->value, NULL, ['granularity' => 1])];
     }
@@ -157,6 +166,6 @@ class ChatUIController extends ControllerBase
     $prefix = ($last_message->get('author')->target_id == $this->currentUser->id()) ? $this->t('Du: ') : '';
     $text = $prefix . mb_strimwidth($last_message->get('message')->value, 0, 20, '...');
 
-    return ['text' => $text, 'time' => $formatted_time];
+    return ['text' => $text, 'time' => $formatted_time, 'unread_count' => $unread_count,];
   }
 }

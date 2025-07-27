@@ -1,3 +1,13 @@
+@charset "UTF-8";
+.chat-ui-container {
+  position: relative;
+  overflow: hidden;
+}
+@media screen and (max-width: 991px) {
+  .chat-ui-container .chat-ui-content {
+    width: 100%;
+  }
+}
 .chat-ui-container .chat-ui-content .private-chat-container {
   overflow: hidden;
   border-radius: 0 1rem 1rem 0;
@@ -14,6 +24,12 @@
   border-width: 1px 1px 0 1px;
   border-style: solid;
   border-color: #ddd;
+}
+@media all and (max-width: 991px) {
+  .chat-ui-container .chat-ui-content .private-chat-container .chat-messages {
+    padding-top: 4rem;
+    border-top-left-radius: 1rem;
+  }
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul {
   margin: 0.25rem 0.25rem 1.5rem 0.25rem;
@@ -56,6 +72,20 @@
 .chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message .body p {
   margin: 0;
 }
+.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-unread .meta::after {
+  content: "✔";
+  color: #b1b1b1;
+  font-size: 1.1rem;
+  font-weight: 100;
+  margin-left: 5px;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-read .meta::after {
+  content: "✔";
+  color: indianred;
+  font-size: 1.1rem;
+  font-weight: 100;
+  margin-left: 5px;
+}
 .chat-ui-container .chat-ui-content .private-chat-container .chat-messages.no-messages {
   display: flex;
   justify-content: center;
@@ -69,15 +99,52 @@
   min-height: unset;
   border-radius: 0 0 1rem 0;
   border: 1px solid #ddd;
-  padding-right: 150px;
+  padding-right: 100px;
+}
+@media all and (max-width: 991px) {
+  .chat-ui-container .chat-ui-content .private-chat-container .chat-form textarea {
+    border-bottom-left-radius: 1rem;
+  }
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-actions .button {
   position: absolute;
   right: 0;
   top: 23px;
+  font-size: 0;
+  /* Text aus dem sichtbaren Bereich schieben */
+  overflow: hidden;
+  /* Verhindert, dass der verschobene Text sichtbar ist */
+  border: none;
+  /* Optional: Rahmen entfernen */
+  background: transparent;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-actions .button::before {
+  content: "➢";
+  /* Dein Unicode-Symbol */
+  font-size: 22px;
+  color: indianred;
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-message {
   margin: 0;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-toggle-sidebar-btn {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+@media all and (max-width: 991px) {
+  .chat-ui-container .chat-ui-content .private-chat-container .chat-toggle-sidebar-btn {
+    display: block;
+  }
 }
 .chat-ui-container .chat-ui-sidebar {
   float: left;
@@ -89,9 +156,20 @@
   border-color: #ddd;
   overflow-y: auto;
 }
-@media all and (min-width: 1200px) {
+@media all and (min-width: 991px) {
   .chat-ui-container .chat-ui-sidebar {
     width: 33%;
+  }
+}
+@media all and (max-width: 991px) {
+  .chat-ui-container .chat-ui-sidebar {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 85%;
+    z-index: 20;
+    transition: left 0.3s ease-in-out;
+    border-right: 1px solid #ccc;
   }
 }
 .chat-ui-container .chat-ui-sidebar ul {
@@ -115,7 +193,23 @@
   flex: 1;
   font-weight: bold;
 }
+.chat-ui-container .chat-ui-sidebar ul li a .chat-list-item-content .chat-list-item-last-message .unread-badge {
+  background-color: indianred;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-right: 5px;
+  display: inline-block;
+  line-height: 1;
+}
 .chat-ui-container .chat-ui-sidebar ul li.is-active a {
   background: indianred;
   color: white;
+}
+@media all and (max-width: 991px) {
+  .chat-ui-container.sidebar-is-visible .chat-ui-sidebar {
+    left: 0;
+  }
 }/*# sourceMappingURL=private_chat.css.map */

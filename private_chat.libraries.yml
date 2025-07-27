@@ -2,6 +2,17 @@ chat-styling:
   css:
     theme:
       css/private_chat.css: {}
+  # js:
+  #   js/private_chat.js: {}
   dependencies:
-    - drupal/jquery
-    - drupal/drupal.ajax
+    - core/jquery
+    - core/drupal.ajax
+mobile-ui:
+  js:
+    js/private_chat.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupal.ajax
+

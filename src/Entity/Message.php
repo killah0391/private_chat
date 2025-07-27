@@ -43,6 +43,11 @@ class Message extends ContentEntityBase
     $fields['author'] = BaseFieldDefinition::create('entity_reference')->setLabel(t('Autor'))->setSetting('target_type', 'user')->setRequired(TRUE)->setDisplayConfigurable('form', TRUE)->setDisplayConfigurable('view', TRUE);
     $fields['message'] = BaseFieldDefinition::create('text_long')->setLabel(t('Nachricht'))->setRequired(TRUE)->setDisplayOptions('view', ['label' => 'hidden', 'type' => 'text_default', 'weight' => 0])->setDisplayConfigurable('form', TRUE)->setDisplayConfigurable('view', TRUE);
     $fields['created'] = BaseFieldDefinition::create('created')->setLabel(t('Erstellt'))->setDisplayConfigurable('view', TRUE);
+    $fields['is_read'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Gelesen'))
+      ->setDescription(t('Gibt an, ob die Nachricht vom Empfänger gelesen wurde.'))
+      ->setDefaultValue(FALSE)
+      ->setRequired(TRUE);
     return $fields;
   }
 }

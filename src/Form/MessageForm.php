@@ -3,25 +3,42 @@
 namespace Drupal\private_chat\Form;
 
 use Drupal\Core\Form\FormBase;
+use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\MessageCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\private_chat\Entity\Chat;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\private_chat\Controller\ChatUIController;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class MessageForm extends FormBase
 {
   protected $entityTypeManager;
-  public function __construct(EntityTypeManagerInterface $entity_type_manager)
+  protected $chatUiController;
+  protected $dateFormatter;
+  protected $currentUser;
+
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, ChatUIController $chat_ui_controller, DateFormatterInterface $date_formatter, AccountInterface $current_user)
   {
     $this->entityTypeManager = $entity_type_manager;
+    $this->chatUiController = $chat_ui_controller;
+    $this->dateFormatter = $date_formatter;
+    $this->currentUser = $current_user;
   }
+
   public static function create(ContainerInterface $container)
   {
-    return new static($container->get('entity_type.manager'));
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('private_chat.chat_ui_controller'),
+      $container->get('date.formatter'),
+      $container->get('current_user')
+    );
   }
   public function getFormId()
   {
@@ -68,18 +85,32 @@ class MessageForm extends FormBase
     $response = new AjaxResponse();
     $chat = $form_state->get('chat');
 
-    // Wir bauen hier die Nachrichtenliste exakt so neu auf, wie es der Controller tut.
-    // Dadurch wird sichergestellt, dass das HTML identisch ist.
+    // 1. Nachrichtenliste neu aufbauen
     $message_ids = $this->entityTypeManager->getStorage('message')->getQuery()->condition('chat_id', $chat->id())->sort('created', 'ASC')->accessCheck(FALSE)->execute();
     $messages = $this->entityTypeManager->getStorage('message')->loadMultiple($message_ids);
 
     $themed_messages = [];
-    // Wir benötigen den DateFormatter Service hier. Da wir ihn nicht per DI injiziert haben,
-    // verwenden wir ausnahmsweise den globalen Service-Aufruf.
-    $date_formatter = \Drupal::service('date.formatter');
-
     foreach ($messages as $message) {
       $author_entity = $message->get('author')->entity;
+      $status_class = ''; // Standardmäßig keine Klasse
+      if ($author_entity->id() == $this->currentUser->id()) {
+        // Wenn der aktuelle Benutzer der Autor ist, prüfe den Lesestatus.
+        $status_class = $message->get('is_read')->value ? 'is-read' : 'is-unread';
+      }
+      $timestamp = $message->get('created')->value;
+      $now = \Drupal::time()->getRequestTime();
+      $difference = $now - $timestamp;
+
+      $formatted_time = '';
+      if ($difference < 1800) { // Weniger als 30 Minuten
+        $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) { // Heute
+        $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) { // Gestern
+        $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } else { // Älter
+        $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
+      }
       $themed_messages[] = [
         '#theme' => 'private_chat_message',
         '#author_name' => $author_entity->getDisplayName(),
@@ -93,23 +124,31 @@ class MessageForm extends FormBase
           '#text' => $message->get('message')->value,
           '#format' => $message->get('message')->format,
         ],
-        '#time' => $date_formatter->format($message->get('created')->value, 'custom', 'H:i'),
-        '#sent_received' => ($author_entity->id() == $this->currentUser()->id()) ? 'sent' : 'received',
+        '#time' => $formatted_time,
+        '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
+        '#status_class' => $status_class,
+        '#message_id' => $message->id(),
       ];
     }
 
-    // Wir bauen das Render-Array für die *gesamte* Seite neu auf.
-    $page_content = [
+    $messages_render_array = [
       '#theme' => 'private_chat_page',
       '#messages' => $themed_messages,
       '#form' => $form,
+       // Das Formular wird hier nicht mehr benötigt, da es nicht neu gerendert wird.
     ];
 
-    // Und ersetzen den gesamten Wrapper mit dem neu aufgebauten Inhalt.
-    $response->addCommand(new ReplaceCommand('#private-chat-wrapper', $page_content));
+    // 2. Seitenleiste neu aufbauen
+    $chat_list_render_array = $this->chatUiController->_buildChatListRenderArray($chat->uuid());
 
+    // BEFEHL 1: Ersetze nur den Nachrichten-Container.
+    $response->addCommand(new ReplaceCommand('.private-chat-container', $messages_render_array));
+    // BEFEHL 2: Ersetze die Seitenleiste.
+    $response->addCommand(new HtmlCommand('#chat-list-wrapper', $chat_list_render_array));
+    // BEFEHL 3: Leere das Textfeld.
     $response->addCommand(new InvokeCommand('textarea[name="message"]', 'val', ['']));
 
+    // Fehlerbehandlung bleibt unverändert.
     if ($form_state->hasAnyErrors()) {
       // Transfer FormState errors to messenger to use the deleteAll() pattern.
       foreach ($form_state->getErrors() as $error_message_text) {
@@ -132,6 +171,7 @@ class MessageForm extends FormBase
         }
       }
     }
+
     return $response;
   }
   public function validateForm(array &$form, FormStateInterface $form_state)

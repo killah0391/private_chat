@@ -113,9 +113,38 @@ class ChatController extends ControllerBase {
     $message_ids = $this->entityTypeManager->getStorage('message')->getQuery()->condition('chat_id', $chat->id())->sort('created', 'ASC')->accessCheck(FALSE)->execute();
     $messages = $this->entityTypeManager->getStorage('message')->loadMultiple($message_ids);
 
+    $save_needed = FALSE;
+    foreach ($messages as $message) {
+      // Nur Nachrichten als gelesen markieren, die nicht vom aktuellen Benutzer stammen und ungelesen sind.
+      if ($message->get('author')->target_id != $this->currentUser->id() && !$message->get('is_read')->value) {
+        $message->set('is_read', TRUE);
+        $message->save();
+      }
+    }
+
     $themed_messages = [];
     foreach ($messages as $message) {
       $author_entity = $message->get('author')->entity;
+      $status_class = ''; // Standardmäßig keine Klasse
+      if ($author_entity->id() == $this->currentUser->id()) {
+        // Wenn der aktuelle Benutzer der Autor ist, prüfe den Lesestatus.
+        $status_class = $message->get('is_read')->value ? 'is-read' : 'is-unread';
+      }
+      $timestamp = $message->get('created')->value;
+      $now = \Drupal::time()->getRequestTime();
+      $difference = $now - $timestamp;
+
+      $formatted_time = '';
+      if ($difference < 1800) { // Weniger als 30 Minuten
+        $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) { // Heute
+        $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) { // Gestern
+        $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } else { // Älter
+        $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
+      }
+
       $themed_messages[] = [
         '#theme' => 'private_chat_message',
         '#author_name' => $author_entity->getDisplayName(),
@@ -129,8 +158,10 @@ class ChatController extends ControllerBase {
           '#text' => $message->get('message')->value,
           '#format' => $message->get('message')->format,
         ],
-        '#time' => $this->dateFormatter->format($message->get('created')->value, 'custom', 'H:i'),
+        '#time' => $formatted_time,
         '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
+        '#status_class' => $status_class,
+        '#message_id' => $message->id(),
       ];
     }
 
@@ -147,6 +178,7 @@ class ChatController extends ControllerBase {
       '#cache' => [
         // Diese Zeile sagt Drupal: "Der Inhalt dieser Seite ist pro Benutzer unterschiedlich."
         'contexts' => ['user'],
+        'tags' => ['message_list:' . $chat->id()],
       ],
     ];
   }

@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the private_chat module.
+ */
+
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+
+/**
+ * Implements hook_update_N().
+ *
+ * Adds the 'is_read' field to the 'message' entity.
+ */
+function private_chat_update_10001(&$sandbox) {
+  $entity_definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type = $entity_definition_update_manager->getEntityType('message');
+
+  if ($entity_type) {
+    // Erstellen Sie die Definition für das neue Feld.
+    $is_read_field = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Gelesen'))
+      ->setDescription(t('Gibt an, ob die Nachricht vom Empfänger gelesen wurde.'))
+      ->setDefaultValue(FALSE)
+      ->setRequired(TRUE);
+
+    // Fügen Sie das Feld zur Entitätsdefinition hinzu.
+    $entity_definition_update_manager->installFieldStorageDefinition('is_read', 'message', 'private_chat', $is_read_field);
+  }
+
+  return t("Das Feld 'is_read' wurde zur Message-Entität hinzugefügt.");
+}

@@ -45,6 +45,8 @@ function private_chat_theme($existing, $type, $theme, $path)
         'body' => NULL,
         'time' => NULL,
         'sent_received' => 'received',
+        'status_class' => NULL,
+        'message_id' => NULL,
       ],
     ],
     'private_chat_ui_page' => [

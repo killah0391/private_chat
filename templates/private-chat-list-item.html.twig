@@ -1,10 +1,12 @@
 {% set classes = [
   'chat-list-item',
   is_active ? 'is-active',
+  last_message.unread_count > 0 ? 'has-unread',
 ] %}
 
+
 <li{{attributes.addClass(classes)}}>
-	<a href="{{ url }}" class="use-ajax chat-list-item" data-ajax-wrapper="chat-content-wrapper">
+	<a href="{{ url }}" class="use-ajax link-item" data-ajax-wrapper="chat-content-wrapper">
 		<div class="chat-list-item-content">
     <div class="chat-list-item-header">
 			<div class="chat-list-item-participant">
@@ -16,6 +18,10 @@
 </div>
 
 			<div class="chat-list-item-last-message">
+{% if last_message.unread_count > 0 %}
+	<span class="unread-badge">{{ last_message.unread_count }}</span>
+{% endif %}
+
 				{{ last_message.text }}
 			</div>
 		</div>

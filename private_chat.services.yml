@@ -7,4 +7,4 @@ services:
   # Wir fügen den Service für den UI-Controller hinzu
   private_chat.chat_ui_controller:
     class: Drupal\private_chat\Controller\ChatUIController
-    arguments: ['@private_chat.chat_controller', '@current_user', '@request_stack']
+    arguments: ['@private_chat.chat_controller', '@current_user', '@request_stack', '@date.formatter']

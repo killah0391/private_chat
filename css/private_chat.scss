@@ -1,5 +1,12 @@
 .chat-ui-container {
+  position: relative;
+  overflow: hidden;
+
   .chat-ui-content {
+    @media screen and (max-width: 991px) {
+      width: 100%;
+    }
+
     .private-chat-container {
       overflow: hidden;
       border-radius: 0 1rem 1rem 0;
@@ -16,6 +23,11 @@
         border-width: 1px 1px 0 1px;
         border-style: solid;
         border-color: #ddd;
+
+        @media all and (max-width: 991px) {
+          padding-top: 4rem;
+          border-top-left-radius: 1rem;
+        }
 
         ul {
           margin: .25rem .25rem 1.5rem .25rem;
@@ -49,18 +61,61 @@
                 justify-content: end;
                 font-size: small;
               }
-                            .author-picture img {
-                              border-radius: 50%;
-                              object-fit: cover;
-                              position: absolute;
-                              top: -16px;
-                              right: -11px;
-                            }
+
+              .author-picture img {
+                border-radius: 50%;
+                object-fit: cover;
+                position: absolute;
+                top: -16px;
+                right: -11px;
+              }
 
               .body {
                 p {
                   margin: 0;
                 }
+              }
+
+              &.sent.is-unread {
+
+                // Ein subtilerer Hinweis, da die Nachricht ja schon gesendet wurde
+                .meta::after {
+                  content: '✔';
+                  color: #b1b1b1;
+                  font-size: 1.1rem;
+                  font-weight: 100;
+                  margin-left: 5px;
+                }
+
+                // .meta::before {
+                //   content: '👁';
+                //   color: #b1b1b1;
+                //   font-size: 1rem;
+                //       font-weight: 100;
+                //   position: absolute;
+                //   right: 7px;
+                // }
+              }
+
+              // Stil für gesendete, gelesene Nachrichten
+              &.sent.is-read {
+                .meta::after {
+                  // Fügt ein "Gelesen"-Häkchen hinzu (Beispiel)
+                  content: '✔';
+                  color: indianred;
+                  font-size: 1.1rem;
+                  font-weight: 100;
+                  margin-left: 5px;
+                }
+
+                // .meta::before {
+                //   content: '\2713';
+                //   color: indianred;
+                //   font-size: 1rem;
+                //       font-weight: 100;
+                //   position: absolute;
+                //   right: 7px;
+                // }
               }
             }
           }
@@ -81,7 +136,10 @@
           min-height: unset;
           border-radius: 0 0 1rem 0;
           border: 1px solid #ddd;
-          padding-right: 150px;
+          padding-right: 100px;
+          @media all and (max-width: 991px) {
+              border-bottom-left-radius: 1rem;
+            }
         }
 
         .form-actions {
@@ -89,6 +147,22 @@
             position: absolute;
             right: 0;
             top: 23px;
+
+            font-size: 0;
+            /* Text aus dem sichtbaren Bereich schieben */
+            overflow: hidden;
+            /* Verhindert, dass der verschobene Text sichtbar ist */
+            border: none;
+            /* Optional: Rahmen entfernen */
+            background: transparent;
+
+            &::before {
+              content: '\27A2';
+              /* Dein Unicode-Symbol */
+              font-size: 22px;
+              color: indianred;
+
+            }
           }
         }
 
@@ -96,72 +170,130 @@
           margin: 0;
         }
       }
+
+      .chat-toggle-sidebar-btn {
+        display: none;
+
+        @media all and (max-width: 991px) {
+          display: block;
+        }
+
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        z-index: 10;
+        background: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
     }
   }
 
   .chat-ui-sidebar {
-        float: left;
-          // padding: 1rem;
-          @media all and (min-width: 1200px) {
-            width: 33%;
-          }
-          height: 618px;
-          background: #f9f9f9;
-          border-radius: 1rem 0 0 1rem;
-          border-style: solid;
-          border-width: 1px 0 1px 1px;
-          border-color: #ddd;
-          overflow-y: auto;
-          ul {
-            list-style: none;
+    float: left;
 
-            margin: 0;
+    // padding: 1rem;
+    @media all and (min-width: 991px) {
+      width: 33%;
+    }
 
-            li {
-              &:first-child {
-                  border-radius: 1rem 0 0 0;
-                }
-              a {
-                display: block;
-                  padding: 1rem;
-                  background: #eee;
-                  color: indianred;
-                  text-decoration: none;
+    @media all and (max-width: 991px) {
+      position: absolute;
+      top: 0;
+      left: -100%; // Standardmäßig aus dem sichtbaren Bereich schieben
+      width: 85%;
+      z-index: 20;
+      transition: left 0.3s ease-in-out; // Sanfte Animation
+      border-right: 1px solid #ccc;
+    }
 
-                  .chat-list-item-content {
-                    .chat-list-item-header {
-                      display: flex;
-                      .chat-list-item-participant {
-                        flex: 1;
-                        font-weight: bold;
-                      }
-                    }
-                  }
+    height: 618px;
+    background: #f9f9f9;
+    border-radius: 1rem 0 0 1rem;
+    border-style: solid;
+    border-width: 1px 0 1px 1px;
+    border-color: #ddd;
+    overflow-y: auto;
+
+    ul {
+      list-style: none;
+
+      margin: 0;
+
+      li {
+        &:first-child {
+          border-radius: 1rem 0 0 0;
+        }
+
+        a {
+          display: block;
+          padding: 1rem;
+          background: #eee;
+          color: indianred;
+          text-decoration: none;
+
+          .chat-list-item-content {
+            .chat-list-item-header {
+              display: flex;
+
+              .chat-list-item-participant {
+                flex: 1;
+                font-weight: bold;
               }
-              &.is-active {
-                a {
-                    // display: block;
-                    // padding: 1rem;
-                    background: indianred;
-                    color: white;
-                    // text-decoration: none;
+            }
 
-                    // &:first-child {
-                    //   border-radius: 1rem 0 0 0;
-                    // }
-
-                    // .chat-list-item-content {
-                    //   .chat-list-item-header {
-                    //     display: flex;
-
-                    //     .chat-list-item-participant {
-                    //       flex: 1;
-                    //     }
-                    //   }
-                    // }
-                  }
+            .chat-list-item-last-message {
+              .unread-badge {
+                background-color: indianred;
+                color: white;
+                border-radius: 50%;
+                padding: 2px 6px;
+                font-size: 0.75rem;
+                font-weight: bold;
+                margin-right: 5px;
+                display: inline-block;
+                line-height: 1;
               }
             }
           }
+        }
+
+        &.is-active {
+          a {
+            // display: block;
+            // padding: 1rem;
+            background: indianred;
+            color: white;
+            // text-decoration: none;
+
+            // &:first-child {
+            //   border-radius: 1rem 0 0 0;
+            // }
+
+            // .chat-list-item-content {
+            //   .chat-list-item-header {
+            //     display: flex;
+
+            //     .chat-list-item-participant {
+            //       flex: 1;
+            //     }
+            //   }
+            // }
+          }
+        }
+      }
+    }
+  }
+
+  @media all and (max-width: 991px) {
+    &.sidebar-is-visible {
+      .chat-ui-sidebar {
+        left: 0;
+      }
+    }
   }
 }
