@@ -1,12 +1,14 @@
-<div class="private-chat-container" id="private-chat-wrapper">
+<div class="private-chat-container" id="private-chat-wrapper" data-chat-uuid="{{ chat_uuid }}">
 <button class="chat-toggle-sidebar-btn" aria-label="{{ 'Zur Chat-Liste'|t }}">←</button>
 {% if messages %}
 	<div class="chat-messages">
+	<ul>
 		{% for message in messages %}
-    <ul><li>
+<li>
 			{{ message }}
-      </ul></li>
+</li>
 		{% endfor %}
+		</ul>
 		</div>
 		{% else %}
 		<div class="chat-messages no-messages">

@@ -48,6 +48,7 @@ class Chat extends ContentEntityBase
     $fields['user2'] = BaseFieldDefinition::create('entity_reference')->setLabel(t('Benutzer 2'))->setSetting('target_type', 'user')->setRequired(TRUE);
     $fields['created'] = BaseFieldDefinition::create('created')->setLabel(t('Erstellt'));
     $fields['changed'] = BaseFieldDefinition::create('changed')->setLabel(t('Geändert'));
+
     return $fields;
   }
   public function getOtherParticipant(UserInterface $user)

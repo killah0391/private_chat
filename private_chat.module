@@ -35,6 +35,7 @@ function private_chat_theme($existing, $type, $theme, $path)
       'variables' => [
         'messages' => [],
         'form' => NULL,
+        'chat_uuid' => NULL,
       ],
     ],
     'private_chat_message' => [
@@ -46,6 +47,7 @@ function private_chat_theme($existing, $type, $theme, $path)
         'time' => NULL,
         'sent_received' => 'received',
         'status_class' => NULL,
+        'status_receiver_class' => NULL,
         'message_id' => NULL,
       ],
     ],
@@ -61,6 +63,10 @@ function private_chat_theme($existing, $type, $theme, $path)
         'is_active' => FALSE,
       ],
       'template' => 'private-chat-list-item',
+    ],
+    'private_chat_messages_container' => [
+      'variables' => ['messages' => NULL],
+      'template' => 'private-chat-messages-container',
     ],
   ];
 }

@@ -97,6 +97,11 @@ class MessageForm extends FormBase
         // Wenn der aktuelle Benutzer der Autor ist, prüfe den Lesestatus.
         $status_class = $message->get('is_read')->value ? 'is-read' : 'is-unread';
       }
+      $status_receiver_class = ''; // Standardmäßig keine Klasse
+      if ($author_entity->id() !== $this->currentUser->id()) {
+        // Wenn der Empfänger die Nachricht gelesen hat, füge die Klasse 'read' hinzu.
+        $status_receiver_class = $message->get('is_read')->value ? 'read' : 'unread';
+      }
       $timestamp = $message->get('created')->value;
       $now = \Drupal::time()->getRequestTime();
       $difference = $now - $timestamp;
@@ -127,6 +132,7 @@ class MessageForm extends FormBase
         '#time' => $formatted_time,
         '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
         '#status_class' => $status_class,
+        '#status_receiver_class' => $status_receiver_class,
         '#message_id' => $message->id(),
       ];
     }

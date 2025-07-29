@@ -33,3 +33,10 @@ private_chat.start:
     parameters:
       user:
         type: entity:user
+
+private_chat.load_more:
+  path: '/chat/{chat_uuid}/load-more'
+  defaults:
+    _controller: '\Drupal\private_chat\Controller\ChatController::loadMoreMessages'
+  requirements:
+    _permission: 'start private chat'

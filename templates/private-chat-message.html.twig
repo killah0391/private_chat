@@ -1,5 +1,5 @@
 
-<div id="message-{{ message_id }}" class="chat-message {{ sent_received }} {{ status_class }}">
+<div id="message-{{ message_id }}" class="chat-message {{ sent_received }} {% if status_class %}{{ status_class }}{% endif %}{% if status_receiver_class %}{{ status_receiver_class }}{% endif %}">
 
 
 	{% if author_picture %}
