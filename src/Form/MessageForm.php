@@ -2,6 +2,7 @@
 
 namespace Drupal\private_chat\Form;
 
+use Drupal\file\Entity\File;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\AjaxResponse;
@@ -11,6 +12,7 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\private_chat\Entity\Chat;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\private_chat\Controller\ChatUIController;
@@ -22,13 +24,15 @@ class MessageForm extends FormBase
   protected $chatUiController;
   protected $dateFormatter;
   protected $currentUser;
+  protected $formBuilder;
 
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ChatUIController $chat_ui_controller, DateFormatterInterface $date_formatter, AccountInterface $current_user)
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, ChatUIController $chat_ui_controller, DateFormatterInterface $date_formatter, AccountInterface $current_user, FormBuilderInterface $form_builder)
   {
     $this->entityTypeManager = $entity_type_manager;
     $this->chatUiController = $chat_ui_controller;
     $this->dateFormatter = $date_formatter;
     $this->currentUser = $current_user;
+    $this->formBuilder = $form_builder;
   }
 
   public static function create(ContainerInterface $container)
@@ -37,7 +41,8 @@ class MessageForm extends FormBase
       $container->get('entity_type.manager'),
       $container->get('private_chat.chat_ui_controller'),
       $container->get('date.formatter'),
-      $container->get('current_user')
+      $container->get('current_user'),
+      $container->get('form_builder')
     );
   }
   public function getFormId()
@@ -46,11 +51,55 @@ class MessageForm extends FormBase
   }
   public function buildForm(array $form, FormStateInterface $form_state, Chat $chat = NULL)
   {
+    if (!$chat) {
+      return [];
+    }
     $form_state->set('chat', $chat);
+    $current_user_id = $this->currentUser()->id();
 
     // Der Wrapper, der durch AJAX ersetzt wird.
     $form['#prefix'] = '<div id="private-chat-form-wrapper">';
     $form['#suffix'] = '</div>';
+
+    $user1_id = $chat->get('user1')->target_id;
+    $is_user1 = ($current_user_id == $user1_id);
+
+    $my_consent_field = $is_user1 ? 'user1_consent' : 'user2_consent';
+    $other_consent_field = $is_user1 ? 'user2_consent' : 'user1_consent';
+
+    $i_have_consented = $chat->get($my_consent_field)->value;
+    $other_has_consented = $chat->get($other_consent_field)->value;
+    $uploads_allowed = $i_have_consented && $other_has_consented;
+
+    $form['consent'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Bild-Upload für diesen Chat zustimmen'),
+      '#default_value' => $i_have_consented,
+      '#weight' => 100,
+      '#ajax' => [
+        'callback' => '::ajaxConsentCallback',
+        'wrapper' => 'private-chat-form-wrapper', // Das ganze Formular neu laden
+      ],
+    ];
+    if ($uploads_allowed) {
+      $form['consent']['#description'] = $this->t('Bild-Upload ist aktiv. Entfernen Sie den Haken, um Ihre Zustimmung zu widerrufen.');
+    } elseif ($i_have_consented && !$other_has_consented) {
+      $form['consent']['#description'] = $this->t('Sie haben zugestimmt. Warten auf die Zustimmung des anderen Benutzers...');
+    }
+
+    // 2. Upload-Feld
+    $form['images'] = [
+      '#type' => 'managed_file',
+      '#title' => $this->t('Bilder anhängen'),
+      '#upload_location' => 'private://private_chat/'.$chat->uuid(),
+      '#multiple' => TRUE,
+      '#weight' => 200,
+      '#upload_validators' => [
+        'file_validate_extensions' => ['png jpg jpeg gif'],
+        'file_validate_image_resolution' => ['800x600'],
+      ],
+      '#access' => $uploads_allowed, // Nur anzeigen, wenn beide zugestimmt haben
+    ];
 
     $form['message'] = [
       '#type' => 'textarea',
@@ -78,6 +127,29 @@ class MessageForm extends FormBase
   }
 
   /**
+   * AJAX Callback für die Zustimmungs-Checkbox.
+   */
+  public function ajaxConsentCallback(array &$form, FormStateInterface $form_state)
+  {
+    /** @var \Drupal\private_chat\Entity\Chat $chat */
+    $chat = $form_state->get('chat');
+    $current_user_id = $this->currentUser()->id();
+    $is_user1 = ($current_user_id == $chat->get('user1')->target_id);
+    $my_consent_field = $is_user1 ? 'user1_consent' : 'user2_consent';
+
+    $consent_value = (bool) $form_state->getValue('consent');
+
+    $chat->set($my_consent_field, $consent_value);
+    $chat->save();
+
+    $rebuild_form = \Drupal::formBuilder()->rebuildForm($this->getFormId(), $form_state, $form);
+    $response = new AjaxResponse();
+    $response->addCommand(new ReplaceCommand('#private-chat-form-wrapper', $rebuild_form));
+
+    return $response;
+  }
+
+  /**
    * Die AJAX-Callback-Funktion.
    */
   public function ajaxSubmitCallback(array &$form, FormStateInterface $form_state)
@@ -91,6 +163,7 @@ class MessageForm extends FormBase
 
     $themed_messages = [];
     foreach ($messages as $message) {
+      $images = $message->get('images');
       $author_entity = $message->get('author')->entity;
       $status_class = ''; // Standardmäßig keine Klasse
       if ($author_entity->id() == $this->currentUser->id()) {
@@ -134,6 +207,7 @@ class MessageForm extends FormBase
         '#status_class' => $status_class,
         '#status_receiver_class' => $status_receiver_class,
         '#message_id' => $message->id(),
+        '#images' => $images,
       ];
     }
 
@@ -152,7 +226,8 @@ class MessageForm extends FormBase
     // BEFEHL 2: Ersetze die Seitenleiste.
     $response->addCommand(new HtmlCommand('#chat-list-wrapper', $chat_list_render_array));
     // BEFEHL 3: Leere das Textfeld.
-    $response->addCommand(new InvokeCommand('textarea[name="message"]', 'val', ['']));
+    $rebuild_form = \Drupal::formBuilder()->rebuildForm($this->getFormId(), $form_state, $form);
+    $response->addCommand(new ReplaceCommand('#private-chat-form-wrapper', $rebuild_form));
 
     // Fehlerbehandlung bleibt unverändert.
     if ($form_state->hasAnyErrors()) {
@@ -183,22 +258,62 @@ class MessageForm extends FormBase
   public function validateForm(array &$form, FormStateInterface $form_state)
   {
     $message = $form_state->getValue('message');
+    $images = $form_state->getValue('images');
 
-    if(!(trim($message))) {
-      $form_state->setErrorByName('message', $this->t('Du musst eine Nachricht eingeben.'));
+    if (empty(trim($message)) && empty($images)) {
+      $form_state->setErrorByName('message', $this->t('Du musst eine Nachricht eingeben oder ein Bild hochladen.'));
     }
   }
+  // public function submitForm(array &$form, FormStateInterface $form_state)
+  // {
+  //   // Diese Funktion speichert die Nachricht. Sie wird VOR dem AJAX-Callback ausgeführt.
+  //   $chat = $form_state->get('chat');
+  //   $this->entityTypeManager->getStorage('message')->create([
+  //     'chat_id' => $chat->id(),
+  //     'author' => $this->currentUser()->id(),
+  //     'message' => $form_state->getValue('message'),
+  //   ])->save();
+
+  //   // Wichtig für AJAX: Das Formular zurücksetzen, damit das Textfeld nach dem Senden leer ist.
+  //   $form_state->setRebuild();
+  // }
   public function submitForm(array &$form, FormStateInterface $form_state)
   {
-    // Diese Funktion speichert die Nachricht. Sie wird VOR dem AJAX-Callback ausgeführt.
-    $chat = $form_state->get('chat');
-    $this->entityTypeManager->getStorage('message')->create([
-      'chat_id' => $chat->id(),
-      'author' => $this->currentUser()->id(),
-      'message' => $form_state->getValue('message'),
-    ])->save();
+    /** @var \Drupal\private_chat\Entity\ChatThread $chat_thread */
+    $chat_thread = $form_state->get('chat');
+    $message_text = $form_state->getValue('message');
+    $image_fids = $form_state->getValue(['images']);
+    $current_user_id = $this->currentUser()->id();
 
-    // Wichtig für AJAX: Das Formular zurücksetzen, damit das Textfeld nach dem Senden leer ist.
-    $form_state->setRebuild();
+    if (empty(trim($message_text)) && empty($image_fids)) {
+      // Nichts zu senden
+      return;
+    }
+
+    // Nachricht erstellen
+    $message = $this->entityTypeManager->getStorage('message')->create([
+      'chat_id' => $chat_thread->id(),
+      'author' => $current_user_id,
+      'message' => $message_text,
+    ]);
+
+    // Hochgeladene Bilder verarbeiten
+    if (!empty($image_fids)) {
+      $files = File::loadMultiple($image_fids);
+      foreach ($files as $file) {
+        $file->setPermanent();
+        $file->save();
+      }
+      $message->set('images', $image_fids);
+    }
+
+    $message->save();
+    $this->messenger()->addStatus($this->t('Nachricht gesendet.'));
+    // Redirect nach dem Senden, damit das Formular sauber neu aufgebaut wird.
+    // $form_state->setRedirect('private_chat.ui', ['chat_uuid' => $chat_thread->uuid()]);
+    $form_state->setValue('images', []);
+    $user_input = $form_state->getUserInput();
+    unset($user_input['images']);
+    $form_state->setUserInput($user_input);
   }
 }

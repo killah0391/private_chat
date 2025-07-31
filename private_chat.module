@@ -7,6 +7,11 @@
 
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\private_chat\Entity\Chat;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\file\FileInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Implements hook_help().
@@ -49,6 +54,7 @@ function private_chat_theme($existing, $type, $theme, $path)
         'status_class' => NULL,
         'status_receiver_class' => NULL,
         'message_id' => NULL,
+        'images' => NULL,
       ],
     ],
     'private_chat_ui_page' => [
@@ -69,4 +75,133 @@ function private_chat_theme($existing, $type, $theme, $path)
       'template' => 'private-chat-messages-container',
     ],
   ];
+}
+
+/**
+ * Implements hook_file_download().
+ *
+ * Kontrolliert den Zugriff auf private Dateien, die über das Chat-Modul hochgeladen wurden.
+ */
+// function private_chat_file_download($uri)
+// {
+//   $stream_wrapper_manager = \Drupal::service('stream_wrapper_manager');
+//   $scheme = $stream_wrapper_manager->getScheme($uri);
+//   $target = $stream_wrapper_manager->getTarget($uri);
+
+//   if ($scheme === 'private' && strpos($target, 'private_chat/') === 0) {
+//     // Lade das vollständige Benutzer-Objekt für eine zuverlässige Berechtigungsprüfung.
+//     $user_storage = \Drupal::entityTypeManager()->getStorage('user');
+//     $account = $user_storage->load(\Drupal::currentUser()->id());
+
+//     // Erlaube Zugriff für Admins.
+//     if ($account && $account->hasPermission('administer users')) {
+//       return [];
+//     }
+
+//     // Lade die Datei-Entität basierend auf dem URI.
+//     $files = \Drupal::entityTypeManager()->getStorage('file')->loadByProperties(['uri' => $uri]);
+//     if (!$file = reset($files)) {
+//       return -1;
+//     }
+
+//     // Finde die Chat-Nachricht, die auf diese Datei verweist.
+//     $message_storage = \Drupal::entityTypeManager()->getStorage('message');
+//     $message_ids = $message_storage->getQuery()
+//       // === KORREKTUR HIER ===
+//       ->condition('images.target_id', $file->id()) // Explizite Abfrage der target_id
+//       ->accessCheck(FALSE)
+//       ->range(0, 1)
+//       ->execute();
+
+//     if (empty($message_ids)) {
+//       return -1;
+//     }
+
+//     // Lade den zugehörigen Chat-Thread und prüfe die Teilnehmer.
+//     /** @var \Drupal\private_chat\Entity\Message $message */
+//     $message = $message_storage->load(reset($message_ids));
+//     /** @var \Drupal\private_chat\Entity\Chat $thread */
+//     $thread = $message->get('chat_id')->entity;
+
+//     if (!$thread) {
+//       return -1;
+//     }
+
+//     $participants = [
+//       $thread->get('user1')->target_id,
+//       $thread->get('user2')->target_id,
+//     ];
+
+//     if ($account && in_array($account->id(), $participants)) {
+//       // Der Benutzer ist Teil des Chats -> Zugriff erlauben.
+//       return [];
+//     }
+
+//     // In allen anderen Fällen -> Zugriff verweigern.
+//     return -1;
+//   }
+
+//   // Für alle anderen Dateien geben wir NULL zurück.
+//   return NULL;
+// }
+
+function private_chat_file_access(FileInterface $file, $operation, AccountInterface $account)
+{
+  // Wir prüfen nur den 'download'-Vorgang.
+  if ($operation !== 'download') {
+    return AccessResult::neutral();
+  }
+
+  $uri = $file->getFileUri();
+  $stream_wrapper_manager = \Drupal::service('stream_wrapper_manager');
+  $scheme = $stream_wrapper_manager->getScheme($uri);
+  $target = $stream_wrapper_manager->getTarget($uri);
+
+  // Wir greifen nur für Dateien in unserem Chat-Ordner ein.
+  if ($scheme === 'private' && strpos($target, 'private_chat/') === 0) {
+    // Lade das vollständige Benutzerobjekt für eine zuverlässige Prüfung.
+    $user_entity = \Drupal::entityTypeManager()->getStorage('user')->load($account->id());
+    if (!$user_entity instanceof UserInterface) {
+      return AccessResult::forbidden();
+    }
+
+    // Admins erlauben den Zugriff.
+    if ($user_entity->hasPermission('administer users')) {
+      return AccessResult::allowed();
+    }
+
+    // Finde die Nachricht, die diese Datei verwendet.
+    $message_storage = \Drupal::entityTypeManager()->getStorage('message');
+    $message_ids = $message_storage->getQuery()
+      ->condition('images.target_id', $file->id())
+      ->accessCheck(FALSE)
+      ->range(0, 1)
+      ->execute();
+
+    if (empty($message_ids)) {
+      return AccessResult::forbidden('File is not used in any message.');
+    }
+
+    // Prüfe, ob der Benutzer am zugehörigen Chat teilnimmt.
+    $message = $message_storage->load(reset($message_ids));
+    $thread = $message->get('chat_id')->entity;
+    if (!$thread) {
+      return AccessResult::forbidden('Message is not linked to a thread.');
+    }
+
+    $participants = [
+      $thread->get('user1')->target_id,
+      $thread->get('user2')->target_id,
+    ];
+
+    if (in_array($account->id(), $participants)) {
+      return AccessResult::allowed();
+    }
+
+    // Wenn keine der Bedingungen zutrifft, verweigere den Zugriff.
+    return AccessResult::forbidden();
+  }
+
+  // Für alle anderen Dateien haben wir keine Meinung.
+  return AccessResult::neutral();
 }

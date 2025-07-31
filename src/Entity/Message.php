@@ -3,8 +3,9 @@
 namespace Drupal\private_chat\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
-use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * @ContentEntityType(
@@ -34,7 +35,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
  * },
  * )
  */
-class Message extends ContentEntityBase
+class Message extends ContentEntityBase implements ContentEntityInterface
 {
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type)
   {
@@ -48,6 +49,20 @@ class Message extends ContentEntityBase
       ->setDescription(t('Gibt an, ob die Nachricht vom Empfänger gelesen wurde.'))
       ->setDefaultValue(FALSE)
       ->setRequired(TRUE);
+    $fields['images'] = BaseFieldDefinition::create('image')
+      ->setLabel(t('Images'))
+      ->setDescription(t('Images attached to the message.'))
+      ->setCardinality(3) // Erlaubt bis zu 3 Bilder
+      ->setSetting('file_extensions', 'png jpg jpeg gif')
+      ->setSetting('alt_field', FALSE)
+      ->setDisplayOptions('view', [
+        'label' => 'hidden',
+        'type' => 'image',
+        'weight' => 1,
+        'settings' => ['image_style' => 'medium'], // Passen Sie den Bildstil an
+      ])
+      ->setDisplayConfigurable('view', TRUE);
+
     return $fields;
   }
 }

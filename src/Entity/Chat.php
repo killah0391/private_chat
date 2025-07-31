@@ -7,6 +7,7 @@ use Drupal\user\UserInterface;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 
 /**
@@ -39,7 +40,7 @@ use Drupal\Core\Entity\EntityStorageInterface;
  * )
  */
 
-class Chat extends ContentEntityBase
+class Chat extends ContentEntityBase implements ContentEntityInterface
 {
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type)
   {
@@ -48,6 +49,15 @@ class Chat extends ContentEntityBase
     $fields['user2'] = BaseFieldDefinition::create('entity_reference')->setLabel(t('Benutzer 2'))->setSetting('target_type', 'user')->setRequired(TRUE);
     $fields['created'] = BaseFieldDefinition::create('created')->setLabel(t('Erstellt'));
     $fields['changed'] = BaseFieldDefinition::create('changed')->setLabel(t('Geändert'));
+    $fields['user1_consent'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('User 1 Consent'))
+      ->setDescription(t('User 1 has consented to image uploads.'))
+      ->setDefaultValue(FALSE);
+
+    $fields['user2_consent'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('User 2 Consent'))
+      ->setDescription(t('User 2 has consented to image uploads.'))
+      ->setDefaultValue(FALSE);
 
     return $fields;
   }

@@ -166,6 +166,8 @@ class ChatController extends ControllerBase {
         $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
       }
 
+      $images = $message->get('images');
+
       $themed_messages[] = [
         '#theme' => 'private_chat_message',
         '#author_name' => $author_entity->getDisplayName(),
@@ -176,6 +178,7 @@ class ChatController extends ControllerBase {
         '#status_class' => $status_class,
         '#status_receiver_class' => $status_receiver_class,
         '#message_id' => $message->id(),
+        '#images' => $images,
       ];
     }
 
@@ -194,7 +197,7 @@ class ChatController extends ControllerBase {
       '#chat_uuid' => $chat->uuid(),
       '#form' => $form,
       '#title' => $this->t('Chat mit @username', ['@username' => $chat->getOtherParticipant($currentUserEntity)->getDisplayName()]),
-      '#attached' => ['library' => ['private_chat/chat-styling']],
+      '#attached' => ['library' => ['private_chat/chat-styling', 'core/drupal.ajax',]],
       '#cache' => ['contexts' => ['user'], 'tags' => ['message_list:' . $chat->id()]],
     ];
   }

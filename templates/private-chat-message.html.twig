@@ -1,4 +1,3 @@
-
 <div id="message-{{ message_id }}" class="chat-message {{ sent_received }} {% if status_class %}{{ status_class }}{% endif %}{% if status_receiver_class %}{{ status_receiver_class }}{% endif %}">
 
 
@@ -10,10 +9,33 @@
 	<div class="chat-message-content">
 		<div class="body">
 			{{ body }}
+			{% if not images.isEmpty() %}
+
+				<div class="message-images">
+					{% for image_item in images %}
+
+						{% set image_style = {
+		'#theme':      'image_style',
+    '#style_name': 'thumbnail',
+'#uri':        image_item.entity.uri.value,
+
+  }
+		 %}
+						<a href="{{ file_url(image_item.entity.uri.value) }}" target="_blank">
+							{{image_style}}
+
+						</a>
+
+						{# 'thumbnail' ist ein Bildstil #}
+					{% endfor %}
+				</div>
+			{% endif %}
+
 		</div>
-		<div class="meta">
+		<div
+			class="meta">
 			{# <span class="chat-message-author">{{ author_name }}</span>
-			| #}
+						| #}
 			<span class="time">{{ time }}</span>
 		</div>
 	</div>

@@ -2,6 +2,7 @@
 .chat-ui-container {
   position: relative;
   overflow: hidden;
+  display: flex;
 }
 @media screen and (max-width: 991px) {
   .chat-ui-container .chat-ui-content {
@@ -94,11 +95,15 @@
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-form {
   position: relative;
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 0 0 1rem 0;
+  border: 1px solid #ddd;
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-form textarea {
   resize: none;
   min-height: unset;
-  border-radius: 0 0 1rem 0;
+  border-radius: 1rem;
   border: 1px solid #ddd;
   padding-right: 100px;
 }
@@ -125,8 +130,23 @@
   font-size: 22px;
   color: indianred;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-message {
+.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item {
   margin: 0;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images label {
+  font-size: 0;
+  width: 0;
+  height: 0;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images label::before {
+  font-size: 1rem;
+  content: "📎";
+  position: absolute;
+  right: 75px;
+  top: 49px;
+}
+.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images input.form-file {
+  display: none;
 }
 .chat-ui-container .chat-ui-content .private-chat-container .chat-toggle-sidebar-btn {
   display: none;
@@ -149,7 +169,6 @@
 }
 .chat-ui-container .chat-ui-sidebar {
   float: left;
-  height: 618px;
   background: #f9f9f9;
   border-radius: 1rem 0 0 1rem;
   border-style: solid;

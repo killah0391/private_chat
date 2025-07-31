@@ -1,6 +1,7 @@
 .chat-ui-container {
   position: relative;
   overflow: hidden;
+  display: flex;
 
   .chat-ui-content {
     @media screen and (max-width: 991px) {
@@ -131,11 +132,15 @@
 
       .chat-form {
         position: relative;
+        background: #f9f9f9;
+          padding: 1rem;
+          border-radius: 0 0 1rem 0;
+          border: 1px solid #ddd;
 
         textarea {
           resize: none;
           min-height: unset;
-          border-radius: 0 0 1rem 0;
+          border-radius: 1rem;
           border: 1px solid #ddd;
           padding-right: 100px;
           @media all and (max-width: 991px) {
@@ -167,9 +172,32 @@
           }
         }
 
-        .form-item.form-item-message {
+        .form-item {
           margin: 0;
+        &.form-item-message {
+          // background: #f9f9f9;
+          // padding: 1rem;
+          // border-radius: 0 0 1rem 0;
+          //   border: 1px solid #ddd;
         }
+        &.form-item-images {
+          label {
+            font-size: 0;
+              width: 0;
+              height: 0;
+            &::before {
+              font-size: 1rem;
+              content: '\1F4CE';
+              position: absolute;
+              right: 75px;
+                top: 49px;
+            }
+          }
+          input.form-file {
+            display: none;
+          }
+        }
+      }
       }
 
       .chat-toggle-sidebar-btn {
@@ -212,7 +240,6 @@
       border-right: 1px solid #ccc;
     }
 
-    height: 618px;
     background: #f9f9f9;
     border-radius: 1rem 0 0 1rem;
     border-style: solid;
