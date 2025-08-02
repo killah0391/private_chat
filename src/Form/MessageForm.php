@@ -15,6 +15,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\private_chat\Controller\ChatController;
 use Drupal\private_chat\Controller\ChatUIController;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -25,14 +26,16 @@ class MessageForm extends FormBase
   protected $dateFormatter;
   protected $currentUser;
   protected $formBuilder;
+  protected $chatController;
 
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, ChatUIController $chat_ui_controller, DateFormatterInterface $date_formatter, AccountInterface $current_user, FormBuilderInterface $form_builder)
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, ChatUIController $chat_ui_controller, DateFormatterInterface $date_formatter, AccountInterface $current_user, FormBuilderInterface $form_builder, ChatController $chat_controller)
   {
     $this->entityTypeManager = $entity_type_manager;
     $this->chatUiController = $chat_ui_controller;
     $this->dateFormatter = $date_formatter;
     $this->currentUser = $current_user;
     $this->formBuilder = $form_builder;
+    $this->chatController = $chat_controller;
   }
 
   public static function create(ContainerInterface $container)
@@ -42,14 +45,15 @@ class MessageForm extends FormBase
       $container->get('private_chat.chat_ui_controller'),
       $container->get('date.formatter'),
       $container->get('current_user'),
-      $container->get('form_builder')
+      $container->get('form_builder'),
+      $container->get('private_chat.chat_controller')
     );
   }
   public function getFormId()
   {
     return 'private_chat_message_form';
   }
-  public function buildForm(array $form, FormStateInterface $form_state, Chat $chat = NULL)
+  public function buildForm(array $form, FormStateInterface $form_state, Chat $chat = NULL, array $block_info = NULL)
   {
     if (!$chat) {
       return [];
@@ -101,12 +105,24 @@ class MessageForm extends FormBase
       '#access' => $uploads_allowed, // Nur anzeigen, wenn beide zugestimmt haben
     ];
 
+    $is_blocked = $block_info['is_blocked'] ?? FALSE;
+
     $form['message'] = [
       '#type' => 'textarea',
       '#title' => $this->t('Deine Nachricht'),
+      '#rows' => 3,
       '#title_display' => 'invisible',
-      '#placeholder' => $this->t('Schreibe eine Nachricht...'),
+      '#placeholder' => $is_blocked ? $this->t('This user is blocked! To send a message, unblock them.') : $this->t('Send a message...'),
+      '#disabled' => $is_blocked,
+      // '#prefix' => '<div class="chat-block-notification">',
+      // '#suffix' => '</div>',
     ];
+
+    // if($is_blocked == TRUE) {
+    //   $form['blocked'] = ['#description' => $block_info['block_message'],
+    //     '#prefix' => '<div class="chat-block-notification">',
+    //     '#suffix' => '</div>',];
+    // }
 
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = [
@@ -121,7 +137,12 @@ class MessageForm extends FormBase
       '#attached' => [
         'library' => ['private_chat/chat-styling'], // Optional: eine CSS-Bibliothek hinzufügen
       ],
+      '#disabled' => $is_blocked,
     ];
+
+    if (isset($form['images'])) {
+      $form['images']['#disabled'] = $is_blocked;
+    }
 
     return $form;
   }
@@ -152,84 +173,35 @@ class MessageForm extends FormBase
   /**
    * Die AJAX-Callback-Funktion.
    */
+  // In killah0391/private_chat/private_chat-421bae0c4a3b761c99009a1c41b3d7b8fb8461c0/src/Form/MessageForm.php
+
+  /**
+   * Die AJAX-Callback-Funktion (vereinfachte Version).
+   */
+  // Ersetzen Sie die ajaxSubmitCallback in src/Form/MessageForm.php
+
   public function ajaxSubmitCallback(array &$form, FormStateInterface $form_state)
   {
     $response = new AjaxResponse();
     $chat = $form_state->get('chat');
 
-    // 1. Nachrichtenliste neu aufbauen
-    $message_ids = $this->entityTypeManager->getStorage('message')->getQuery()->condition('chat_id', $chat->id())->sort('created', 'ASC')->accessCheck(FALSE)->execute();
-    $messages = $this->entityTypeManager->getStorage('message')->loadMultiple($message_ids);
+    // 1. Hole das gerenderte HTML für die neuen Nachrichten.
+    $messages_render_array = $this->chatController->buildMessagesRenderArray($chat);
 
-    $themed_messages = [];
-    foreach ($messages as $message) {
-      $images = $message->get('images');
-      $author_entity = $message->get('author')->entity;
-      $status_class = ''; // Standardmäßig keine Klasse
-      if ($author_entity->id() == $this->currentUser->id()) {
-        // Wenn der aktuelle Benutzer der Autor ist, prüfe den Lesestatus.
-        $status_class = $message->get('is_read')->value ? 'is-read' : 'is-unread';
-      }
-      $status_receiver_class = ''; // Standardmäßig keine Klasse
-      if ($author_entity->id() !== $this->currentUser->id()) {
-        // Wenn der Empfänger die Nachricht gelesen hat, füge die Klasse 'read' hinzu.
-        $status_receiver_class = $message->get('is_read')->value ? 'read' : 'unread';
-      }
-      $timestamp = $message->get('created')->value;
-      $now = \Drupal::time()->getRequestTime();
-      $difference = $now - $timestamp;
-
-      $formatted_time = '';
-      if ($difference < 1800) { // Weniger als 30 Minuten
-        $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
-      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) { // Heute
-        $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
-      } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) { // Gestern
-        $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
-      } else { // Älter
-        $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
-      }
-      $themed_messages[] = [
-        '#theme' => 'private_chat_message',
-        '#author_name' => $author_entity->getDisplayName(),
-        '#author_picture' => $author_entity->get('field_profile_picture')->view([
-          'label' => 'hidden',
-          'type' => 'image',
-          'settings' => ['image_style' => 'chat_small'],
-        ]),
-        '#body' => [
-          '#type' => 'processed_text',
-          '#text' => $message->get('message')->value,
-          '#format' => $message->get('message')->format,
-        ],
-        '#time' => $formatted_time,
-        '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
-        '#status_class' => $status_class,
-        '#status_receiver_class' => $status_receiver_class,
-        '#message_id' => $message->id(),
-        '#images' => $images,
-      ];
-    }
-
-    $messages_render_array = [
-      '#theme' => 'private_chat_page',
-      '#messages' => $themed_messages,
-      '#form' => $form,
-       // Das Formular wird hier nicht mehr benötigt, da es nicht neu gerendert wird.
-    ];
-
-    // 2. Seitenleiste neu aufbauen
+    // 2. Hole das gerenderte HTML für die aktualisierte Seitenleiste.
     $chat_list_render_array = $this->chatUiController->_buildChatListRenderArray($chat->uuid());
 
-    // BEFEHL 1: Ersetze nur den Nachrichten-Container.
-    $response->addCommand(new ReplaceCommand('.private-chat-container', $messages_render_array));
-    // BEFEHL 2: Ersetze die Seitenleiste.
-    $response->addCommand(new HtmlCommand('#chat-list-wrapper', $chat_list_render_array));
-    // BEFEHL 3: Leere das Textfeld.
-    $rebuild_form = \Drupal::formBuilder()->rebuildForm($this->getFormId(), $form_state, $form);
-    $response->addCommand(new ReplaceCommand('#private-chat-form-wrapper', $rebuild_form));
+    // 4. Erstelle die AJAX-Befehle, um die Seite zu aktualisieren.
+    // Ersetzt den Inhalt des ul-Elements mit den neuen Nachrichten.
+    $response->addCommand(new HtmlCommand('.chat-messages ul', $messages_render_array));
 
-    // Fehlerbehandlung bleibt unverändert.
+    // Ersetzt die Chat-Liste in der Seitenleiste.
+    $response->addCommand(new HtmlCommand('#chat-list-wrapper', $chat_list_render_array));
+
+    // Ersetzt das gesamte Formular-Wrapper durch die neu aufgebaute, leere Version.
+    // $rebuilt_form = \Drupal::formBuilder()->rebuildForm($this->getFormId(), $form_state, $form);
+    $response->addCommand(new ReplaceCommand('#private-chat-form-wrapper', $form));
+
     if ($form_state->hasAnyErrors()) {
       // Transfer FormState errors to messenger to use the deleteAll() pattern.
       foreach ($form_state->getErrors() as $error_message_text) {
@@ -257,6 +229,19 @@ class MessageForm extends FormBase
   }
   public function validateForm(array &$form, FormStateInterface $form_state)
   {
+    $chat = $form_state->get('chat');
+    $currentUser = $this->entityTypeManager->getStorage('user')->load($this->currentUser()->id());
+    $otherParticipant = $chat->getOtherParticipant($currentUser);
+
+    /** @var \Drupal\user_blocker\BlockManager $blockManager */
+    // Service-Namen aktualisieren
+    $blockManager = \Drupal::service('user_blocker.block_manager');
+    $blocker = $blockManager->getBlocker($currentUser, $otherParticipant);
+
+    if ($blocker) {
+      $form_state->setErrorByName('message', $this->t('This conversation is blocked.'));
+    }
+
     $message = $form_state->getValue('message');
     $images = $form_state->getValue('images');
 
@@ -279,27 +264,28 @@ class MessageForm extends FormBase
   // }
   public function submitForm(array &$form, FormStateInterface $form_state)
   {
-    /** @var \Drupal\private_chat\Entity\ChatThread $chat_thread */
-    $chat_thread = $form_state->get('chat');
+    /** @var \Drupal\private_chat\Entity\Chat $chat */
+    $chat = $form_state->get('chat');
     $message_text = $form_state->getValue('message');
-    $image_fids = $form_state->getValue(['images']);
+    $image_fids = $form_state->getValue('images');
     $current_user_id = $this->currentUser()->id();
 
     if (empty(trim($message_text)) && empty($image_fids)) {
-      // Nichts zu senden
+      // Nichts zu senden, den Rebuild trotzdem signalisieren, um Fehler zu vermeiden.
+      $form_state->setRebuild(TRUE);
       return;
     }
 
     // Nachricht erstellen
     $message = $this->entityTypeManager->getStorage('message')->create([
-      'chat_id' => $chat_thread->id(),
+      'chat_id' => $chat->id(),
       'author' => $current_user_id,
       'message' => $message_text,
     ]);
 
-    // Hochgeladene Bilder verarbeiten
+    // Hochgeladene Bilder verarbeiten (Ihre Logik ist hier korrekt)
     if (!empty($image_fids)) {
-      $files = File::loadMultiple($image_fids);
+      $files = \Drupal\file\Entity\File::loadMultiple($image_fids);
       foreach ($files as $file) {
         $file->setPermanent();
         $file->save();
@@ -308,12 +294,14 @@ class MessageForm extends FormBase
     }
 
     $message->save();
-    $this->messenger()->addStatus($this->t('Nachricht gesendet.'));
-    // Redirect nach dem Senden, damit das Formular sauber neu aufgebaut wird.
-    // $form_state->setRedirect('private_chat.ui', ['chat_uuid' => $chat_thread->uuid()]);
+
+    // WICHTIG: Formularwerte zurücksetzen und Neuaufbau signalisieren.
     $form_state->setValue('images', []);
+    $form_state->setValue('message', '');
+    $form_state->setRebuild(TRUE);
     $user_input = $form_state->getUserInput();
     unset($user_input['images']);
+    unset($user_input['message']);
     $form_state->setUserInput($user_input);
   }
 }

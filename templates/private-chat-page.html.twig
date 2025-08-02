@@ -1,7 +1,18 @@
 <div class="private-chat-container" id="private-chat-wrapper" data-chat-uuid="{{ chat_uuid }}">
 <button class="chat-toggle-sidebar-btn" aria-label="{{ 'Zur Chat-Liste'|t }}">←</button>
+<div
+	class="chat-header">
+	{# {{dpm(form.consent)}} #}
+	{% if block_info.block_action_link %}
+		<div class="chat-header actions">
+			{{ block_info.block_action_link }}
+		</div>
+	{% endif %}
+</div>
+
 {% if messages %}
 	<div class="chat-messages">
+
 	<ul>
 		{% for message in messages %}
 <li>
@@ -17,6 +28,11 @@
 		{% endif %}
 
 	<div class="chat-form">
+{% if block_info.is_blocked %}
+	<div class="chat-block-notification">{{ block_info.block_message }}</div>
+{% else %}
+
 		{{ form }}
+		{% endif %}
 		</div>
 	</div>

@@ -2,19 +2,21 @@
 
 namespace Drupal\private_chat\Controller;
 
+use Drupal\Core\Url;
+use Drupal\Core\Render\Renderer;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\PrependCommand;
 use Drupal\private_chat\Entity\Chat;
+use Drupal\user_blocker\BlockManager;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Render\Renderer;
-use Drupal\Core\Render\RendererInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Controller für die Anzeige einer einzelnen Chat-Seite.
@@ -40,16 +42,18 @@ class ChatController extends ControllerBase {
   protected $currentUser;
 
   protected $renderer;
+  protected $blockManager;
 
   /**
    * ChatController constructor.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, AccountInterface $current_user, DateFormatterInterface $date_formatter, RendererInterface $renderer) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, AccountInterface $current_user, DateFormatterInterface $date_formatter, RendererInterface $renderer, BlockManager $block_manager) {
     // Wir übernehmen die drei Dienste aus der services.yml-Datei.
     $this->entityTypeManager = $entity_type_manager;
     $this->currentUser = $current_user;
     $this->dateFormatter = $date_formatter;
     $this->renderer = $renderer;
+    $this->blockManager = $block_manager;
   }
 
   /**
@@ -62,6 +66,7 @@ class ChatController extends ControllerBase {
       $container->get('current_user'),
       $container->get('date.formatter'),
       $container->get('renderer'),
+      $container->get('user_blocker.block_manager')
     );
   }
 
@@ -112,6 +117,39 @@ class ChatController extends ControllerBase {
     }
 
     $currentUserEntity = $this->entityTypeManager->getStorage('user')->load($this->currentUser->id());
+    $otherParticipant = $chat->getOtherParticipant($currentUserEntity);
+
+    $blocker = $this->blockManager->getBlocker($currentUserEntity, $otherParticipant);
+    $block_info = [
+      'is_blocked' => FALSE,
+      'block_message' => '',
+      'block_action_link' => [],
+    ];
+
+    if ($blocker) {
+      $block_info['is_blocked'] = TRUE;
+      if ($blocker->id() == $this->currentUser->id()) {
+        // Current user is the blocker
+        $block_info['block_message'] = $this->t('You have blocked @username. You cannot send messages.', ['@username' => $otherParticipant->getDisplayName()]);
+        $block_info['block_action_link'] = [
+          '#type' => 'link',
+          '#title' => $this->t('Unblock user'),
+          '#url' => Url::fromRoute('user_blocker.unblock', ['blocked_user' => $otherParticipant->id()]),
+          '#attributes' => ['class' => ['btn', 'btn-primary']],
+        ];
+      } else {
+        // Current user is blocked
+        $block_info['block_message'] = $this->t('You can no longer reply to this conversation.');
+      }
+    } else {
+      // No block exists, show the "Block" button
+      $block_info['block_action_link'] = [
+        '#type' => 'link',
+        '#title' => $this->t('Block user'),
+        '#url' => Url::fromRoute('user_blocker.block', ['blocked_user' => $otherParticipant->id()]),
+        '#attributes' => ['class' => ['btn', 'btn-primary']],
+      ];
+    }
 
     // === SCHRITT 1: NACHRICHTEN LADEN ===
     $message_ids = $this->entityTypeManager->getStorage('message')->getQuery()
@@ -172,7 +210,7 @@ class ChatController extends ControllerBase {
         '#theme' => 'private_chat_message',
         '#author_name' => $author_entity->getDisplayName(),
         '#author_picture' => $author_entity->get('field_profile_picture')->view(['label' => 'hidden', 'type' => 'image', 'settings' => ['image_style' => 'chat_small']]),
-        '#body' => ['#type' => 'processed_text', '#text' => $message->get('message')->value, '#format' => $message->get('message')->format],
+        '#body' => ['#type' => 'processed_text', '#text' => $message->get('message')->value ?? '', '#format' => $message->get('message')->format],
         '#time' => $formatted_time,
         '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
         '#status_class' => $status_class,
@@ -189,16 +227,18 @@ class ChatController extends ControllerBase {
       $message->save();
     }
 
-    $form = $this->formBuilder()->getForm('\Drupal\private_chat\Form\MessageForm', $chat);
+    $form = $this->formBuilder()->getForm('\Drupal\private_chat\Form\MessageForm', $chat, $block_info);
 
     return [
       '#theme' => 'private_chat_page',
+      // Verwenden Sie die Variable, die Sie bereits erstellt haben.
       '#messages' => $themed_messages,
       '#chat_uuid' => $chat->uuid(),
       '#form' => $form,
       '#title' => $this->t('Chat mit @username', ['@username' => $chat->getOtherParticipant($currentUserEntity)->getDisplayName()]),
       '#attached' => ['library' => ['private_chat/chat-styling', 'core/drupal.ajax',]],
       '#cache' => ['contexts' => ['user'], 'tags' => ['message_list:' . $chat->id()]],
+      '#block_info' => $block_info,
     ];
   }
 
@@ -299,5 +339,80 @@ class ChatController extends ControllerBase {
     $response = new AjaxResponse();
     $response->addCommand(new PrependCommand('.chat-messages ul', $html));
     return $response;
+  }
+
+  public function buildMessagesRenderArray(Chat $chat)
+  {
+    $themed_messages = [];
+    $messages_to_mark_as_read = [];
+
+    $message_ids = $this->entityTypeManager->getStorage('message')->getQuery()
+      ->condition('chat_id', $chat->id())
+      ->sort('created', 'DESC')
+      ->range(0, 20) // Lädt die letzten 20 Nachrichten
+      ->accessCheck(FALSE)
+      ->execute();
+
+    if (!empty($message_ids)) {
+      $messages = $this->entityTypeManager->getStorage('message')->loadMultiple(array_reverse($message_ids));
+
+      foreach ($messages as $message) {
+        $author_entity = $message->get('author')->entity;
+        $is_receiver_and_unread = ($author_entity->id() != $this->currentUser->id() && !$message->get('is_read')->value);
+        if ($is_receiver_and_unread) {
+          $messages_to_mark_as_read[] = $message;
+        }
+
+        $status_class = '';
+        if ($author_entity->id() == $this->currentUser->id()) {
+          $status_class = $message->get('is_read')->value ? 'is-read' : 'is-unread';
+        }
+
+        $status_receiver_class = '';
+        if ($author_entity->id() !== $this->currentUser->id()) {
+          $status_receiver_class = $is_receiver_and_unread ? 'unread' : 'read';
+        }
+
+        $timestamp = $message->get('created')->value;
+        $now = \Drupal::time()->getRequestTime();
+        $difference = $now - $timestamp;
+
+        $formatted_time = '';
+        if ($difference < 1800) {
+          $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+        } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) {
+          $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+        } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) {
+          $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+        } else {
+          $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
+        }
+
+        $themed_messages[] = [
+          '#theme' => 'private_chat_message',
+          '#author_name' => $author_entity->getDisplayName(),
+          '#author_picture' => $author_entity->get('field_profile_picture')->view(['label' => 'hidden', 'type' => 'image', 'settings' => ['image_style' => 'chat_small']]),
+          '#body' => ['#type' => 'processed_text', '#text' => $message->get('message')->value, '#format' => $message->get('message')->format],
+          '#time' => $formatted_time,
+          '#sent_received' => ($author_entity->id() == $this->currentUser->id()) ? 'sent' : 'received',
+          '#status_class' => $status_class,
+          '#status_receiver_class' => $status_receiver_class,
+          '#message_id' => $message->id(),
+          '#images' => $message->get('images'),
+        ];
+      }
+    }
+
+    // Nachdem die Anzeige vorbereitet wurde, die Nachrichten als gelesen speichern.
+    foreach ($messages_to_mark_as_read as $message) {
+      $message->set('is_read', TRUE);
+      $message->save();
+    }
+
+    // Verwenden Sie das vorhandene Template für den Nachrichten-Container.
+    return [
+      '#theme' => 'private_chat_messages_container',
+      '#messages' => $themed_messages,
+    ];
   }
 }

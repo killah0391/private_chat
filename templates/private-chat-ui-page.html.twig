@@ -1,5 +1,5 @@
-<div class="chat-ui-container">
-	<aside class="chat-ui-sidebar">
+<div class="chat-ui-container ui-container">
+	<aside class="chat-ui-sidebar ui-sidebar">
 		{# Das <ul> umschließt die Liste. Die ID kommt auf das <ul>. #}
 		<ul class="chat-list" id="chat-list-wrapper">
 			{% for item in chat_list %}
@@ -8,7 +8,7 @@
 		</ul>
 	</aside>
 
-	<main class="chat-ui-content" id="chat-content-wrapper">
+	<main class="chat-ui-content ui-content" id="chat-content-wrapper">
 		{{ chat_content }}
 	</main>
 </div>

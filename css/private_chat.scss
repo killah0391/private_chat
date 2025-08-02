@@ -1,9 +1,12 @@
 .chat-ui-container {
+  &.ui-container {
   position: relative;
   overflow: hidden;
   display: flex;
 
   .chat-ui-content {
+    &.ui-content {
+    min-width: 70%;
     @media screen and (max-width: 991px) {
       width: 100%;
     }
@@ -11,6 +14,10 @@
     .private-chat-container {
       overflow: hidden;
       border-radius: 0 1rem 1rem 0;
+      @media screen and (max-width: 991px) {
+        border-radius: 1rem
+
+      }
 
       .chat-messages {
         display: flex;
@@ -20,14 +27,13 @@
         min-height: 500px;
         max-height: 500px;
         background: #f9f9f9;
-        border-radius: 0 1rem 0 0;
         border-width: 1px 1px 0 1px;
         border-style: solid;
         border-color: #ddd;
 
         @media all and (max-width: 991px) {
           padding-top: 4rem;
-          border-top-left-radius: 1rem;
+          // border-top-left-radius: 1rem;
         }
 
         ul {
@@ -155,16 +161,16 @@
             top: 23px;
 
             font-size: 0;
-            /* Text aus dem sichtbaren Bereich schieben */
+
             overflow: hidden;
-            /* Verhindert, dass der verschobene Text sichtbar ist */
+
             border: none;
-            /* Optional: Rahmen entfernen */
+
             background: transparent;
 
             &::before {
               content: '\27A2';
-              /* Dein Unicode-Symbol */
+
               font-size: 22px;
               color: indianred;
 
@@ -197,7 +203,21 @@
             display: none;
           }
         }
+        &.form-item-consent {
+          text-align: center;
+          font-size: small;
+          margin: 1rem;
+        }
       }
+            .chat-block-notification {
+              background-color: #fff3cd;
+              color: #856404;
+              border: 1px solid #ffeeba;
+              border-radius: .25rem;
+              padding: .75rem 1.25rem;
+              margin: 1rem;
+              text-align: center;
+            }
       }
 
       .chat-toggle-sidebar-btn {
@@ -219,25 +239,62 @@
         font-size: 1.5rem;
         cursor: pointer;
       }
+            .chat-header {
+                  padding: 0.5rem 1rem;
+                    background: #f1f1f1;
+                    /* border-bottom: 1px solid #ddd; */
+                    display: flex;
+                    justify-content: flex-end;
+                    align-items: center;
+                    height: 90px;
+
+              &.actions {
+                .button {
+                  text-transform: uppercase;
+                  font-size: 0.8rem;
+                  font-weight: bold;
+                  padding: 0.4rem 0.8rem;
+                  border-radius: 4px;
+                  text-decoration: none;
+                }
+
+                .button--danger {
+                  background-color: #e53e3e;
+                  color: white;
+                  border: 1px solid transparent;
+
+                  &:hover,
+                  &:focus {
+                    background-color: #c53030;
+                    color: white;
+                  }
+                }
+              }
+            }
     }
+  }
+}
   }
 
   .chat-ui-sidebar {
-    float: left;
+    &.ui-sidebar {
+
 
     // padding: 1rem;
     @media all and (min-width: 991px) {
-      width: 33%;
+      min-width: 30%;
     }
 
     @media all and (max-width: 991px) {
       position: absolute;
       top: 0;
       left: -100%; // Standardmäßig aus dem sichtbaren Bereich schieben
-      width: 85%;
+      width: 100%;
       z-index: 20;
       transition: left 0.3s ease-in-out; // Sanfte Animation
       border-right: 1px solid #ccc;
+      height: 100%;
+      border-radius: 1rem;
     }
 
     background: #f9f9f9;
@@ -251,8 +308,10 @@
       list-style: none;
 
       margin: 0;
+      padding: 0;
 
       li {
+        height: 90px;
         &:first-child {
           border-radius: 1rem 0 0 0;
         }
@@ -260,9 +319,10 @@
         a {
           display: block;
           padding: 1rem;
-          background: #eee;
+          background: #f5f5f5;
           color: indianred;
           text-decoration: none;
+          height: 90px;
 
           .chat-list-item-content {
             .chat-list-item-header {
@@ -316,12 +376,15 @@
       }
     }
   }
+}
 
   @media all and (max-width: 991px) {
     &.sidebar-is-visible {
       .chat-ui-sidebar {
+        &.ui-sidebar {
         left: 0;
       }
+    }
     }
   }
     .ajax-progress {
@@ -367,3 +430,12 @@
     transform: rotate(360deg);
   }
 }
+// .chat-ui-container {
+//   display: flex;
+//   .chat-ui-sidebar {
+//     min-width: 30%;
+//   }
+//   .chat-ui-content {
+//     min-width: 70%;
+//   }
+// }

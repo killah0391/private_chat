@@ -41,6 +41,7 @@ function private_chat_theme($existing, $type, $theme, $path)
         'messages' => [],
         'form' => NULL,
         'chat_uuid' => NULL,
+        'block_info' => NULL,
       ],
     ],
     'private_chat_message' => [
@@ -144,6 +145,16 @@ function private_chat_theme($existing, $type, $theme, $path)
 //   // Für alle anderen Dateien geben wir NULL zurück.
 //   return NULL;
 // }
+
+/**
+ * Implements hook_preprocess_image().
+ */
+function private_chat_preprocess_image(&$variables)
+{
+  if ($variables['style_name'] == 'chat_small') {
+    $variables['attributes']['class'][] = 'rounded-circle';
+  }
+}
 
 function private_chat_file_access(FileInterface $file, $operation, AccountInterface $account)
 {

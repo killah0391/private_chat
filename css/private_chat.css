@@ -1,19 +1,27 @@
 @charset "UTF-8";
-.chat-ui-container {
+.chat-ui-container.ui-container {
   position: relative;
   overflow: hidden;
   display: flex;
 }
+.chat-ui-container.ui-container .chat-ui-content.ui-content {
+  min-width: 70%;
+}
 @media screen and (max-width: 991px) {
-  .chat-ui-container .chat-ui-content {
+  .chat-ui-container.ui-container .chat-ui-content.ui-content {
     width: 100%;
   }
 }
-.chat-ui-container .chat-ui-content .private-chat-container {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container {
   overflow: hidden;
   border-radius: 0 1rem 1rem 0;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages {
+@media screen and (max-width: 991px) {
+  .chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container {
+    border-radius: 1rem;
+  }
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -21,25 +29,23 @@
   min-height: 500px;
   max-height: 500px;
   background: #f9f9f9;
-  border-radius: 0 1rem 0 0;
   border-width: 1px 1px 0 1px;
   border-style: solid;
   border-color: #ddd;
 }
 @media all and (max-width: 991px) {
-  .chat-ui-container .chat-ui-content .private-chat-container .chat-messages {
+  .chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages {
     padding-top: 4rem;
-    border-top-left-radius: 1rem;
   }
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul {
   display: contents;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li {
   list-style: none;
   margin: 0.25rem 0.25rem 1.5rem 0.25rem;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message {
   padding: 0.75rem;
   border-radius: 1rem;
   word-break: break-word;
@@ -47,23 +53,23 @@
   min-width: 25%;
   position: relative;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.sent {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message.sent {
   float: right;
   background: #eee;
   color: #999;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.received {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message.received {
   float: left;
   background: indianred;
   color: white;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message .meta {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message .meta {
   font-weight: bold;
   display: flex;
   justify-content: end;
   font-size: small;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message .author-picture img {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message .author-picture img {
   border-radius: 50%;
   -o-object-fit: cover;
      object-fit: cover;
@@ -71,36 +77,36 @@
   top: -16px;
   right: -11px;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message .body p {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message .body p {
   margin: 0;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-unread .meta::after {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-unread .meta::after {
   content: "✔";
   color: #b1b1b1;
   font-size: 1.1rem;
   font-weight: 100;
   margin-left: 5px;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-read .meta::after {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages ul li .chat-message.sent.is-read .meta::after {
   content: "✔";
   color: indianred;
   font-size: 1.1rem;
   font-weight: 100;
   margin-left: 5px;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-messages.no-messages {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-messages.no-messages {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form {
   position: relative;
   background: #f9f9f9;
   padding: 1rem;
   border-radius: 0 0 1rem 0;
   border: 1px solid #ddd;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form textarea {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form textarea {
   resize: none;
   min-height: unset;
   border-radius: 1rem;
@@ -108,47 +114,57 @@
   padding-right: 100px;
 }
 @media all and (max-width: 991px) {
-  .chat-ui-container .chat-ui-content .private-chat-container .chat-form textarea {
+  .chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form textarea {
     border-bottom-left-radius: 1rem;
   }
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-actions .button {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-actions .button {
   position: absolute;
   right: 0;
   top: 23px;
   font-size: 0;
-  /* Text aus dem sichtbaren Bereich schieben */
   overflow: hidden;
-  /* Verhindert, dass der verschobene Text sichtbar ist */
   border: none;
-  /* Optional: Rahmen entfernen */
   background: transparent;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-actions .button::before {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-actions .button::before {
   content: "➢";
-  /* Dein Unicode-Symbol */
   font-size: 22px;
   color: indianred;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-item {
   margin: 0;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images label {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-item.form-item-images label {
   font-size: 0;
   width: 0;
   height: 0;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images label::before {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-item.form-item-images label::before {
   font-size: 1rem;
   content: "📎";
   position: absolute;
   right: 75px;
   top: 49px;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-form .form-item.form-item-images input.form-file {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-item.form-item-images input.form-file {
   display: none;
 }
-.chat-ui-container .chat-ui-content .private-chat-container .chat-toggle-sidebar-btn {
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .form-item.form-item-consent {
+  text-align: center;
+  font-size: small;
+  margin: 1rem;
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-form .chat-block-notification {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  margin: 1rem;
+  text-align: center;
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-toggle-sidebar-btn {
   display: none;
   position: absolute;
   top: 1rem;
@@ -163,12 +179,37 @@
   cursor: pointer;
 }
 @media all and (max-width: 991px) {
-  .chat-ui-container .chat-ui-content .private-chat-container .chat-toggle-sidebar-btn {
+  .chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-toggle-sidebar-btn {
     display: block;
   }
 }
-.chat-ui-container .chat-ui-sidebar {
-  float: left;
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-header {
+  padding: 0.5rem 1rem;
+  background: #f1f1f1;
+  /* border-bottom: 1px solid #ddd; */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 90px;
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-header.actions .button {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-header.actions .button--danger {
+  background-color: #e53e3e;
+  color: white;
+  border: 1px solid transparent;
+}
+.chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-header.actions .button--danger:hover, .chat-ui-container.ui-container .chat-ui-content.ui-content .private-chat-container .chat-header.actions .button--danger:focus {
+  background-color: #c53030;
+  color: white;
+}
+.chat-ui-container .chat-ui-sidebar.ui-sidebar {
   background: #f9f9f9;
   border-radius: 1rem 0 0 1rem;
   border-style: solid;
@@ -177,43 +218,50 @@
   overflow-y: auto;
 }
 @media all and (min-width: 991px) {
-  .chat-ui-container .chat-ui-sidebar {
-    width: 33%;
+  .chat-ui-container .chat-ui-sidebar.ui-sidebar {
+    min-width: 30%;
   }
 }
 @media all and (max-width: 991px) {
-  .chat-ui-container .chat-ui-sidebar {
+  .chat-ui-container .chat-ui-sidebar.ui-sidebar {
     position: absolute;
     top: 0;
     left: -100%;
-    width: 85%;
+    width: 100%;
     z-index: 20;
     transition: left 0.3s ease-in-out;
     border-right: 1px solid #ccc;
+    height: 100%;
+    border-radius: 1rem;
   }
 }
-.chat-ui-container .chat-ui-sidebar ul {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul {
   list-style: none;
   margin: 0;
+  padding: 0;
 }
-.chat-ui-container .chat-ui-sidebar ul li:first-child {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li {
+  height: 90px;
+}
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li:first-child {
   border-radius: 1rem 0 0 0;
 }
-.chat-ui-container .chat-ui-sidebar ul li a {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li a {
   display: block;
   padding: 1rem;
-  background: #eee;
+  background: #f5f5f5;
   color: indianred;
   text-decoration: none;
+  height: 90px;
 }
-.chat-ui-container .chat-ui-sidebar ul li a .chat-list-item-content .chat-list-item-header {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li a .chat-list-item-content .chat-list-item-header {
   display: flex;
 }
-.chat-ui-container .chat-ui-sidebar ul li a .chat-list-item-content .chat-list-item-header .chat-list-item-participant {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li a .chat-list-item-content .chat-list-item-header .chat-list-item-participant {
   flex: 1;
   font-weight: bold;
 }
-.chat-ui-container .chat-ui-sidebar ul li a .chat-list-item-content .chat-list-item-last-message .unread-badge {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li a .chat-list-item-content .chat-list-item-last-message .unread-badge {
   background-color: indianred;
   color: white;
   border-radius: 50%;
@@ -224,12 +272,12 @@
   display: inline-block;
   line-height: 1;
 }
-.chat-ui-container .chat-ui-sidebar ul li.is-active a {
+.chat-ui-container .chat-ui-sidebar.ui-sidebar ul li.is-active a {
   background: indianred;
   color: white;
 }
 @media all and (max-width: 991px) {
-  .chat-ui-container.sidebar-is-visible .chat-ui-sidebar {
+  .chat-ui-container.sidebar-is-visible .chat-ui-sidebar.ui-sidebar {
     left: 0;
   }
 }
