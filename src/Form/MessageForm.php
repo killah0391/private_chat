@@ -75,24 +75,41 @@ class MessageForm extends FormBase
     $other_has_consented = $chat->get($other_consent_field)->value;
     $uploads_allowed = $i_have_consented && $other_has_consented;
 
-    $form['consent'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Bild-Upload für diesen Chat zustimmen'),
-      '#default_value' => $i_have_consented,
-      '#weight' => 100,
-      '#ajax' => [
-        'callback' => '::ajaxConsentCallback',
-        'wrapper' => 'private-chat-form-wrapper', // Das ganze Formular neu laden
-      ],
+    $config = $this->config('private_chat.settings');
+    $global_uploads_enabled = (bool) $config->get('allow_uploads');
+
+    // Die Variable $uploads_allowed kommt vermutlich bereits aus Ihrer bestehenden Logik.
+    // Beispiel: $uploads_allowed = $chat->userHasUploadPermission();
+
+    // 2. Kombinieren Sie die globale Einstellung mit der lokalen Berechtigung.
+    $final_access = $global_uploads_enabled && $uploads_allowed;
+
+    $form['message_container'] = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['message-input-container', 'position-relative', 'mb-0']],
     ];
-    if ($uploads_allowed) {
-      $form['consent']['#description'] = $this->t('Bild-Upload ist aktiv. Entfernen Sie den Haken, um Ihre Zustimmung zu widerrufen.');
-    } elseif ($i_have_consented && !$other_has_consented) {
-      $form['consent']['#description'] = $this->t('Sie haben zugestimmt. Warten auf die Zustimmung des anderen Benutzers...');
-    }
+
+    // $form['message_container']['consent'] = [
+    //   '#type' => 'checkbox',
+    //   '#title' => $this->t('Allow image uploads for this Chat.'),
+    //   '#default_value' => $i_have_consented,
+    //   '#weight' => 100,
+    //   '#ajax' => [
+    //     'callback' => '::ajaxConsentCallback',
+    //     'wrapper' => 'private-chat-form-wrapper', // Das ganze Formular neu laden
+    //   ],
+    //   '#access' => $global_uploads_enabled,
+    // ];
+    // if ($uploads_allowed) {
+    //   $form['message_container']['consent']['#description'] = $this->t('Image uploads active. Remove checkbox to disable.');
+    // } elseif ($i_have_consented && !$other_has_consented) {
+    //   $form['message_container']['consent']['#description'] = $this->t('You have accepted. Wait for other user to accept.');
+    // }
+
+
 
     // 2. Upload-Feld
-    $form['images'] = [
+    $form['message_container']['images'] = [
       '#type' => 'managed_file',
       '#title' => $this->t('Bilder anhängen'),
       '#upload_location' => 'private://private_chat/'.$chat->uuid(),
@@ -102,14 +119,33 @@ class MessageForm extends FormBase
         'file_validate_extensions' => ['png jpg jpeg gif'],
         'file_validate_image_resolution' => ['800x600'],
       ],
-      '#access' => $uploads_allowed, // Nur anzeigen, wenn beide zugestimmt haben
+      '#access' => $final_access, // Nur anzeigen, wenn beide zugestimmt haben
+      // '#theme' => 'image_widget',
+      // '#preview_image_style' => 'chat_small',
+    ];
+
+    $form['image_previews'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'chat-image-previews-' . $chat->id()],
+      '#weight' => -5, // Place it above the file input element.
+      '#access' => $final_access,
+    ];
+
+    // Hidden field to track FIDs of removed images.
+    // JS should populate this with a comma-separated list of FIDs.
+    $form['images_to_remove'] = [
+      '#type' => 'hidden',
+      '#default_value' => '',
+      '#attributes' => ['id' => 'edit-images-to-remove-' . $chat->id()],
+      '#access' => $final_access,
     ];
 
     $is_blocked = $block_info['is_blocked'] ?? FALSE;
 
-    $form['message'] = [
+
+    $form['message_container']['message'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Deine Nachricht'),
+      '#title' => $this->t('Your message'),
       '#rows' => 3,
       '#title_display' => 'invisible',
       '#placeholder' => $is_blocked ? $this->t('This user is blocked! To send a message, unblock them.') : $this->t('Send a message...'),
@@ -124,10 +160,10 @@ class MessageForm extends FormBase
     //     '#suffix' => '</div>',];
     // }
 
-    $form['actions']['#type'] = 'actions';
-    $form['actions']['submit'] = [
+    $form['message_container']['actions']['#type'] = 'actions';
+    $form['message_container']['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Senden'),
+      '#value' => $this->t('Send'),
       // Hier wird der Button als AJAX-Button konfiguriert
       '#ajax' => [
         'callback' => '::ajaxSubmitCallback',
@@ -141,7 +177,7 @@ class MessageForm extends FormBase
     ];
 
     if (isset($form['images'])) {
-      $form['images']['#disabled'] = $is_blocked;
+      $form['message_container']['images']['#disabled'] = $is_blocked;
     }
 
     return $form;
@@ -243,10 +279,20 @@ class MessageForm extends FormBase
     }
 
     $message = $form_state->getValue('message');
-    $images = $form_state->getValue('images');
 
-    if (empty(trim($message)) && empty($images)) {
-      $form_state->setErrorByName('message', $this->t('Du musst eine Nachricht eingeben oder ein Bild hochladen.'));
+    // 1. Holen Sie die FIDs, die durch das JS zum Entfernen markiert wurden.
+    $fids_to_remove_raw = $form_state->getValue('images_to_remove');
+    $fids_to_remove = !empty($fids_to_remove_raw) ? explode(',', $fids_to_remove_raw) : [];
+
+    // 2. Holen Sie alle FIDs, die das managed_file-Element aktuell enthält.
+    $submitted_fids = $form_state->getValue('images');
+
+    // 3. Berechnen Sie die finale Liste der Bilder, indem Sie die zu entfernenden abziehen.
+    $final_fids = array_diff($submitted_fids, $fids_to_remove);
+
+    // 4. Führen Sie die Validierung gegen die BEREINIGTE Liste der Bilder durch.
+    if (empty(trim($message)) && empty($final_fids)) {
+      $form_state->setErrorByName('message', $this->t('You need to enter a message or upload atleast one image.'));
     }
   }
   // public function submitForm(array &$form, FormStateInterface $form_state)
@@ -267,14 +313,7 @@ class MessageForm extends FormBase
     /** @var \Drupal\private_chat\Entity\Chat $chat */
     $chat = $form_state->get('chat');
     $message_text = $form_state->getValue('message');
-    $image_fids = $form_state->getValue('images');
     $current_user_id = $this->currentUser()->id();
-
-    if (empty(trim($message_text)) && empty($image_fids)) {
-      // Nichts zu senden, den Rebuild trotzdem signalisieren, um Fehler zu vermeiden.
-      $form_state->setRebuild(TRUE);
-      return;
-    }
 
     // Nachricht erstellen
     $message = $this->entityTypeManager->getStorage('message')->create([
@@ -283,14 +322,45 @@ class MessageForm extends FormBase
       'message' => $message_text,
     ]);
 
+    $fids_to_remove_raw = $form_state->getValue('images_to_remove');
+    $fids_to_remove = !empty($fids_to_remove_raw) ? explode(',', $fids_to_remove_raw) : [];
+
+    // 2. Holen Sie die Liste aller ursprünglich hochgeladenen FIDs aus dem managed_file Element.
+    // Der Schlüssel 'images' muss dem Namen Ihres file-Elements entsprechen.
+    $submitted_fids = $form_state->getValue('images');
+
+    // 3. Filtern Sie die zu entfernenden FIDs aus der Liste der übermittelten FIDs.
+    // Das Ergebnis ist die endgültige Liste der FIDs, die gespeichert werden sollen.
+    $final_fids = array_diff($submitted_fids, $fids_to_remove);
+
+    // 4. (Optional, aber empfohlen) Sorgen Sie dafür, dass die entfernten Dateien
+    // als temporär markiert bleiben, damit sie später von Drupal bereinigt werden können.
+    // Wenn Sie die Dateien sofort löschen wollen, seien Sie vorsichtig.
+    if (!empty($fids_to_remove)) {
+      $files_to_delete = File::loadMultiple($fids_to_remove);
+      foreach ($files_to_delete as $file) {
+        // Setzen Sie den Status auf temporär, damit Cron sie löschen kann,
+        // oder rufen Sie $file->delete() auf, um sie sofort zu löschen.
+        // Das Setzen auf temporär ist sicherer.
+        $file->setTemporary();
+        $file->save();
+      }
+    }
+
+    if (empty(trim($message_text)) && empty($final_fids)) {
+      // Nichts zu senden, den Rebuild trotzdem signalisieren, um Fehler zu vermeiden.
+      $form_state->setRebuild(TRUE);
+      return;
+    }
+
     // Hochgeladene Bilder verarbeiten (Ihre Logik ist hier korrekt)
-    if (!empty($image_fids)) {
-      $files = \Drupal\file\Entity\File::loadMultiple($image_fids);
+    if (!empty($final_fids)) {
+      $files = \Drupal\file\Entity\File::loadMultiple($final_fids);
       foreach ($files as $file) {
         $file->setPermanent();
         $file->save();
       }
-      $message->set('images', $image_fids);
+      $message->set('images', $final_fids);
     }
 
     $message->save();

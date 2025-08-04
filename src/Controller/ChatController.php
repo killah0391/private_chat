@@ -195,11 +195,13 @@ class ChatController extends ControllerBase {
 
       $formatted_time = '';
       if ($difference < 1800) {
-        $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+        $formatted_time = $this->t('@time ago', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
       } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) {
         $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
       } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) {
-        $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+        $formatted_time = $this->t('Yesterday, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } elseif ($timestamp >= strtotime('-7 days', $now)) {
+        $formatted_time = $this->t('@day, @time', ['@day' => $this->dateFormatter->format($timestamp, 'custom', 'l'), '@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
       } else {
         $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
       }
@@ -229,12 +231,15 @@ class ChatController extends ControllerBase {
 
     $form = $this->formBuilder()->getForm('\Drupal\private_chat\Form\MessageForm', $chat, $block_info);
 
+    $consent_form = $this->formBuilder()->getForm('\Drupal\private_chat\Form\ConsentForm', $chat);
+
     return [
       '#theme' => 'private_chat_page',
       // Verwenden Sie die Variable, die Sie bereits erstellt haben.
       '#messages' => $themed_messages,
       '#chat_uuid' => $chat->uuid(),
       '#form' => $form,
+      '#consent_form' => $consent_form,
       '#title' => $this->t('Chat mit @username', ['@username' => $chat->getOtherParticipant($currentUserEntity)->getDisplayName()]),
       '#attached' => ['library' => ['private_chat/chat-styling', 'core/drupal.ajax',]],
       '#cache' => ['contexts' => ['user'], 'tags' => ['message_list:' . $chat->id()]],
@@ -306,11 +311,13 @@ class ChatController extends ControllerBase {
 
       $formatted_time = '';
       if ($difference < 1800) {
-        $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+        $formatted_time = $this->t('@time ago', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
       } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) {
         $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
       } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) {
-        $formatted_time = $this->t('Gestern, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+        $formatted_time = $this->t('Yesterday, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      } elseif ($timestamp >= strtotime('-7 days', $now)) {
+        $formatted_time = $this->t('@day, @time', ['@day' => $this->dateFormatter->format($timestamp, 'custom', 'l'), '@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
       } else {
         $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
       }

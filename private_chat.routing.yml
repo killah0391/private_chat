@@ -5,7 +5,7 @@ private_chat.ui:
   path: '/chat/ui/{chat_uuid?}'
   defaults:
     _controller: '\Drupal\private_chat\Controller\ChatUIController::buildUi'
-    _title: 'Meine Chats'
+    _title: 'My chats'
     # Wir setzen einen Standardwert auf NULL, falls keine UUID übergeben wird.
     chat_uuid: NULL
   requirements:
@@ -15,7 +15,7 @@ private_chat.load_ajax:
   path: '/chat/load/{chat_uuid}'
   defaults:
     _controller: '\Drupal\private_chat\Controller\ChatUIController::loadChatAjax'
-    _title: 'Chat laden'
+    _title: 'Load chat'
   requirements:
     _permission: 'start private chat'
     # Es ist eine gute Praxis, das Format der UUID zu überprüfen.
@@ -25,7 +25,7 @@ private_chat.start:
   path: '/chat/start/{user}'
   defaults:
     _controller: '\Drupal\private_chat\Controller\ChatController::startChat'
-    _title: 'Chat starten'
+    _title: 'Start chat'
   requirements:
     _permission: 'start private chat'
     user: \d+
@@ -40,3 +40,11 @@ private_chat.load_more:
     _controller: '\Drupal\private_chat\Controller\ChatController::loadMoreMessages'
   requirements:
     _permission: 'start private chat'
+
+private_chat.settings:
+  path: '/admin/config/system/settings'
+  defaults:
+    _title: 'Private Chat settings'
+    _form: 'Drupal\private_chat\Form\SettingsForm'
+  requirements:
+    _permission: 'administer site configuration'

@@ -44,12 +44,12 @@ class ChatUIController extends ControllerBase
   public function buildUi(string $chat_uuid = NULL)
   {
     $session = $this->requestStack->getSession();
-    $active_chat_uuid = $chat_uuid ?? $session->get('private_chat_last_selected_uuid');
+    $active_chat_uuid = $chat_uuid;
 
     // Rufe die Hilfsfunktion auf, um die Chat-Liste zu erstellen.
     $chat_list = $this->_buildChatListRenderArray($active_chat_uuid);
 
-    $chat_content = ['#markup' => '<div class="no-chat-selected">' . $this->t('Wählen Sie einen Chat aus der Liste aus.') . '</div>'];
+    // $chat_content = ['#markup' => '<div class="private-chat-container"><div class="chat-messages no-chat-selected fs-4 d-flex flex-wrap align-content-center justify-content-center">' . $this->t('Select a chat from the list.') . '</div></div>'];
     if ($active_chat_uuid && $this->entityTypeManager()->getStorage('chat')->loadByProperties(['uuid' => $active_chat_uuid])) {
       $chat_content = $this->chatController->chatPage($active_chat_uuid);
     }
@@ -75,8 +75,8 @@ class ChatUIController extends ControllerBase
    */
   public function loadChatAjax(string $chat_uuid)
   {
-    $session = $this->requestStack->getSession();
-    $session->set('private_chat_last_selected_uuid', $chat_uuid);
+    // $session = $this->requestStack->getSession();
+    // $session->set('private_chat_last_selected_uuid', $chat_uuid);
 
     // 1. Hole den neuen Hauptinhalt.
     $chat_page_render_array = $this->chatController->chatPage($chat_uuid);
@@ -145,7 +145,7 @@ class ChatUIController extends ControllerBase
     $unread_count = $unread_count_query->count()->execute();
 
     if (!$last_message) {
-      return ['text' => 'Noch keine Nachrichten.', 'time' => $this->dateFormatter->formatDiff($chat->get('created')->value, NULL, ['granularity' => 1])];
+      return ['text' => 'No message at the moment.', 'time' => $this->dateFormatter->formatDiff($chat->get('created')->value, NULL, ['granularity' => 1])];
     }
 
     $timestamp = $last_message->get('created')->value;
@@ -154,17 +154,43 @@ class ChatUIController extends ControllerBase
 
     $formatted_time = '';
     if ($difference < 1800) {
-      $formatted_time = $this->t('vor @time', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
+      $formatted_time = $this->t('@time ago', ['@time' => $this->dateFormatter->formatInterval($difference, 1)]);
     } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', $now)) {
-      $formatted_time = $this->t('Heute, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+      $formatted_time = $this->t('@time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
     } elseif (date('Y-m-d', $timestamp) == date('Y-m-d', strtotime('-1 day', $now))) {
-      $formatted_time = $this->t('Gestern');
+      $formatted_time = $this->t('Yesterday, @time', ['@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
+    } elseif ($timestamp >= strtotime('-7 days', $now)) {
+      $formatted_time = $this->t('@day, @time', ['@day' => $this->dateFormatter->format($timestamp, 'custom', 'l'), '@time' => $this->dateFormatter->format($timestamp, 'custom', 'H:i')]);
     } else {
-      $formatted_time = $this->dateFormatter->formatDiff($timestamp, NULL, ['granularity' => 1]);
+      $formatted_time = $this->dateFormatter->format($timestamp, 'medium', 'H:i');
     }
 
-    $prefix = ($last_message->get('author')->target_id == $this->currentUser->id()) ? $this->t('Du: ') : '';
-    $text = $prefix . mb_strimwidth($last_message->get('message')->value, 0, 20, '...');
+    $prefix = ($last_message->get('author')->target_id == $this->currentUser->id()) ? $this->t('You: ') : '';
+
+    // 1. Prüfen, ob Bilder und/oder Text vorhanden sind.
+    //    Ersetzen Sie 'images' mit dem Maschinennamen Ihres Dateifeldes!
+    $has_images = !$last_message->get('images')->isEmpty();
+    $message_text = $last_message->get('message')->value;
+    $has_text = !empty(trim($message_text)); // trim() stellt sicher, dass Leerzeichen nicht als Text zählen
+
+    $preview_content = '';
+
+    // 2. Den passenden Vorschautext basierend auf dem Inhalt erstellen.
+    if ($has_images && $has_text) {
+      // Szenario: Bilder und Text
+      $image_count = count($last_message->get('images'));
+      $preview_content = $this->formatPlural($image_count, '1 🖼️ ', '@count 🖼️') . $message_text;
+    } elseif ($has_images) {
+      // Szenario: Nur Bilder
+      // Optional: Anzahl der Bilder anzeigen
+      $image_count = count($last_message->get('images'));
+      $preview_content = $this->formatPlural($image_count, '1 🖼️', '@count 🖼️');
+    } elseif ($has_text) {
+      // Szenario: Nur Text (Ihr bisheriger Code)
+      $preview_content = $message_text;
+    }
+
+    $text = $prefix . mb_strimwidth($preview_content, 0, 25, '...');
 
     return ['text' => $text, 'time' => $formatted_time, 'unread_count' => $unread_count,];
   }

@@ -1,0 +1,8 @@
+# Schema for the configuration files of the Private Chat module.
+private_chat.settings:
+  type: config_object
+  label: 'Private Chat settings'
+  mapping:
+    example:
+      type: string
+      label: 'Example'

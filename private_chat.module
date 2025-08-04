@@ -40,6 +40,7 @@ function private_chat_theme($existing, $type, $theme, $path)
       'variables' => [
         'messages' => [],
         'form' => NULL,
+        'consent_form' => NULL,
         'chat_uuid' => NULL,
         'block_info' => NULL,
       ],
@@ -197,7 +198,7 @@ function private_chat_file_access(FileInterface $file, $operation, AccountInterf
     $message = $message_storage->load(reset($message_ids));
     $thread = $message->get('chat_id')->entity;
     if (!$thread) {
-      return AccessResult::forbidden('Message is not linked to a thread.');
+      return AccessResult::forbidden('Message is not linked to a Chat.');
     }
 
     $participants = [
@@ -215,4 +216,21 @@ function private_chat_file_access(FileInterface $file, $operation, AccountInterf
 
   // Für alle anderen Dateien haben wir keine Meinung.
   return AccessResult::neutral();
+}
+
+/**
+ * Implements hook_preprocess_file_link().
+ */
+function private_chat_preprocess_file_link(&$variables)
+{
+  // Get the file entity from the variables.
+  $file = $variables['file'];
+
+  // Ensure we have a file ID to work with.
+  if ($fid = $file->id()) {
+    // This is the key part: Add the 'data-drupal-selector' attribute that
+    // the JavaScript is looking for to correctly identify the file.
+    // The format 'file-FID-' matches the expectation in the JS.
+    $variables['attributes']['data-drupal-selector'] = 'file-' . $fid . '-';
+  }
 }

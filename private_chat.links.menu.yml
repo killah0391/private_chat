@@ -1,0 +1,6 @@
+private_chat.settings:
+  title: Private Chat settings
+  description: Configure Private Chat module
+  parent: system.admin_config_system
+  route_name: private_chat.settings
+  weight: 10
